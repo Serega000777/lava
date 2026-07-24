@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Foundation — implementation and verification.
+Auth and Profiles — ready to start.
 
 ## Completed
 
@@ -16,10 +16,11 @@ Foundation — implementation and verification.
 - Full Docker stack starts successfully; API and dependencies report healthy.
 - Initial Alembic migration applies and the idempotent seed creates cars, goods and services.
 - Web responds on port 3000; API health and readiness respond on port 8000.
+- Foundation bootstrap is published to GitHub and CI passes.
 
 ## In progress
 
-- First foundation commit and GitHub push.
+None.
 
 ## Blocked
 
@@ -27,9 +28,9 @@ None.
 
 ## Next tasks
 
-- Run lint, typecheck, tests, build and Docker verification.
-- Commit and push the verified foundation.
-- Begin authentication and profiles.
+- Model users, roles, permissions, sessions and verification levels.
+- Implement password login and a local-only OTP provider behind feature flags.
+- Add profile API/UI and authorization tests.
 
 ## Known limitations
 
@@ -61,4 +62,4 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-24: web 1 passed; API 1 passed.
+2026-07-24: local web 1 passed; local API 1 passed; GitHub Actions run 30094457520 passed.
