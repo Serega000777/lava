@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Auth and Profiles — ready to start.
+Listings — ready to start after Auth and Profiles review.
 
 ## Completed
 
@@ -17,6 +17,10 @@ Auth and Profiles — ready to start.
 - Initial Alembic migration applies and the idempotent seed creates cars, goods and services.
 - Web responds on port 3000; API health and readiness respond on port 8000.
 - Foundation bootstrap is published to GitHub and CI passes.
+- Auth domain includes users, password credentials, revocable sessions, roles and verification levels.
+- Password auth uses Argon2id; development OTP is hashed/rate-limited in Redis.
+- Login and profile pages are implemented.
+- Migration 0002 and complete password/OTP/profile/logout flows pass in Docker.
 
 ## In progress
 
@@ -28,13 +32,12 @@ None.
 
 ## Next tasks
 
-- Model users, roles, permissions, sessions and verification levels.
-- Implement password login and a local-only OTP provider behind feature flags.
-- Add profile API/UI and authorization tests.
+- Add category attributes and listing lifecycle.
+- Implement drafts, media metadata and ownership authorization.
 
 ## Known limitations
 
-Only the first foundation slice is implemented. Production integrations are intentionally absent.
+Production SMS and VK providers are disabled. CSRF tokens and account recovery are scheduled before public beta.
 
 ## Technical debt
 
@@ -59,7 +62,11 @@ None for the foundation.
 - `GET /ready` — 200, status `ready`.
 - `GET http://localhost:3000` — 200.
 - PostgreSQL seed query — cars, goods and services present.
+- `python -m pytest apps/api/tests -q` — 5 passed.
+- Auth Docker flow — register, cookie session, `/me`, profile update, logout and OTP passed.
+- Invalid password — 401; revoked/logout session — 401; OTP rate limit — 429.
+- Alembic version — `0002`.
 
 ## Latest successful test run
 
-2026-07-24: local web 1 passed; local API 1 passed; GitHub Actions run 30094457520 passed.
+2026-07-24: local web 1 passed; local API 5 passed; frontend production build and Docker auth integration passed.

@@ -31,3 +31,6 @@ docker compose config
 
 Product scope, architecture, roadmap and current verification status live in `docs/`.
 
+## Development authentication
+
+Password and local OTP flows are enabled only for local development. Phone numbers use E.164 format. The OTP request endpoint returns `dev_code` only when `APP_ENV=development`; never enable this behavior in production. See `docs/authentication.md`.
