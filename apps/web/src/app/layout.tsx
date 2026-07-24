@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./styles.css";
+import "./auth.css";
 
 export const metadata: Metadata = {
   title: "Lava — объявления по-честному",
@@ -13,4 +14,3 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
-
