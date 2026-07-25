@@ -8,6 +8,7 @@ from sqlalchemy import text
 from app.config import settings
 from app.db import session_factory
 from app.auth.router import router as auth_router
+from app.listings.router import router as listings_router
 
 
 @asynccontextmanager
@@ -24,6 +25,7 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 app.include_router(auth_router)
+app.include_router(listings_router)
 
 
 @app.get("/health", tags=["system"])

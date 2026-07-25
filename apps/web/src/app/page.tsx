@@ -12,7 +12,7 @@ export default function Home() {
         <nav aria-label="Основная навигация">
           <a href="#categories">Категории</a><a href="#trust">Как это работает</a>
         </nav>
-        <div className="actions"><Link className="button-link ghost" href="/login">Войти</Link><button>Разместить объявление</button></div>
+        <div className="actions"><Link className="button-link ghost" href="/login">Войти</Link><Link className="button-link" href="/listings/new">Разместить объявление</Link></div>
       </header>
       <section className="hero">
         <p className="eyebrow">ЧЕСТНЫЕ ОБЪЯВЛЕНИЯ РЯДОМ</p>
