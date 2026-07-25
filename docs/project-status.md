@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Listings — ready to start after Auth and Profiles review.
+Moderation — ready to start after Listings review.
 
 ## Completed
 
@@ -21,6 +21,9 @@ Listings — ready to start after Auth and Profiles review.
 - Password auth uses Argon2id; development OTP is hashed/rate-limited in Redis.
 - Login and profile pages are implemented.
 - Migration 0002 and complete password/OTP/profile/logout flows pass in Docker.
+- Category attributes, owner-scoped listing drafts and the moderation-submit transition are implemented.
+- The web app includes an authenticated draft-creation flow.
+- Migration 0003, seeded attributes and listing ownership/lifecycle pass in Docker.
 
 ## In progress
 
@@ -32,8 +35,8 @@ None.
 
 ## Next tasks
 
-- Add category attributes and listing lifecycle.
-- Implement drafts, media metadata and ownership authorization.
+- Review and merge the Listings PR.
+- Implement moderation queue, decisions, reasons and audit history.
 
 ## Known limitations
 
@@ -66,7 +69,11 @@ None for the foundation.
 - Auth Docker flow — register, cookie session, `/me`, profile update, logout and OTP passed.
 - Invalid password — 401; revoked/logout session — 401; OTP rate limit — 429.
 - Alembic version — `0002`.
+- `python -m pytest apps/api/tests -q` — 8 passed.
+- Listings Docker flow — draft, owner update and submit passed.
+- Foreign draft read — 404; incomplete submit — 422; edit after submit — 409.
+- Alembic version — `0003`.
 
 ## Latest successful test run
 
-2026-07-24: local web 1 passed; local API 5 passed; frontend production build and Docker auth integration passed.
+2026-07-25: local web 1 passed; local API 8 passed; frontend build and Docker Listings integration passed.
