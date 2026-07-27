@@ -20,6 +20,7 @@ class ConversationResponse(BaseModel):
 
 class ConversationSummary(ConversationResponse):
     listing_title: str
+    counterpart_id: uuid.UUID
     counterpart_name: str
 
 
