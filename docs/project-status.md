@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Favorites, Messaging and Notifications — Messaging verified and ready for review.
+Reviews and Reputation — verified and ready for review.
 
 ## Completed
 
@@ -134,3 +134,18 @@ None for the foundation.
 - Duplicate `(sender_id, client_message_id)` rows — zero.
 - Notification read transition — passed.
 - Messages page — 200.
+- Messaging PR merged into `main`.
+- Immutable interaction-backed reviews and public reputation summaries are implemented.
+- The inbox displays counterpart reputation and provides an eligible review form.
+
+## Reviews verification
+
+- Alembic version — `0008`.
+- Review before two-sided messaging — 409.
+- One immutable review per conversation and reviewer — enforced; duplicate returns 409.
+- Buyer and seller reputation aggregates — `5.00/1` and `4.00/1`.
+- Unknown public user — 404.
+- Public review DTO omits conversation and participant UUIDs.
+- API tests — 27 passed.
+- Frontend lint, typecheck, 4 tests and production build — passed.
+- Docker Messages page with reputation UI — 200.

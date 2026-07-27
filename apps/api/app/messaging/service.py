@@ -145,6 +145,10 @@ async def list_conversations(
             Conversation.updated_at,
             Listing.title.label("listing_title"),
             case(
+                (Conversation.buyer_id == user_id, Conversation.seller_id),
+                else_=Conversation.buyer_id,
+            ).label("counterpart_id"),
+            case(
                 (Conversation.buyer_id == user_id, seller.display_name),
                 else_=buyer.display_name,
             ).label("counterpart_name"),
