@@ -6,6 +6,7 @@ export type PublicListing = {
   description: string;
   price: string | null;
   city: string;
+  ai_generated_fields?: string[];
 };
 
 type Props = {
@@ -39,6 +40,7 @@ export function ListingCard({
           </button>
         )}
         <p className="listing-city">{listing.city}</p>
+        {listing.ai_generated_fields?.length ? <span className="ai-label">AI-assisted</span> : null}
         <h2>{listing.title}</h2>
         <p>{listing.description || "Продавец пока не добавил описание."}</p>
         <strong>{formatPrice(listing.price)}</strong>

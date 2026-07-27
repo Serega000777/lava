@@ -30,6 +30,7 @@ class PublicListingResponse(BaseModel):
     price: Decimal | None
     city: str
     attributes: dict[str, object]
+    ai_generated_fields: list[str]
     created_at: datetime
     model_config = {"from_attributes": True}
 

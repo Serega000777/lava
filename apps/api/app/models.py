@@ -112,6 +112,7 @@ class Listing(Base):
     price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     city: Mapped[str] = mapped_column(String(120))
     attributes: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    ai_generated_fields: Mapped[list[str]] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -217,6 +218,66 @@ class Review(Base):
     rating: Mapped[int] = mapped_column(SmallInteger)
     comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CreditAccount(Base):
+    __tablename__ = "credit_accounts"
+    __table_args__ = (CheckConstraint("balance >= 0"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    balance: Mapped[int] = mapped_column(default=0)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class CreditLedgerEntry(Base):
+    __tablename__ = "credit_ledger"
+    __table_args__ = (
+        CheckConstraint("kind IN ('welcome_grant', 'ai_text_debit', 'ai_text_refund')"),
+        CheckConstraint("amount <> 0"),
+        CheckConstraint("balance_after >= 0"),
+        UniqueConstraint("user_id", "kind", "reference_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    kind: Mapped[str] = mapped_column(String(32))
+    amount: Mapped[int] = mapped_column()
+    balance_after: Mapped[int] = mapped_column()
+    reference_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AiGeneration(Base):
+    __tablename__ = "ai_generations"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'completed', 'failed', 'accepted')"),
+        UniqueConstraint("user_id", "client_request_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    listing_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE")
+    )
+    client_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    status: Mapped[str] = mapped_column(String(24), default="pending")
+    provider: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(String(64))
+    prompt_version: Mapped[str] = mapped_column(String(32))
+    input_snapshot: Mapped[dict[str, object]] = mapped_column(JSON)
+    output: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    credit_cost: Mapped[int] = mapped_column(default=1)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ModerationCase(Base):
