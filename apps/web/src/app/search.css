@@ -64,6 +64,7 @@
   margin: -12px 0 22px;
   color: var(--muted);
 }
+.message-button{width:100%;margin-top:16px}.inbox-shell{display:grid;grid-template-columns:minmax(260px,340px) 1fr;min-height:calc(100vh - 78px)}.conversation-list{padding:38px 24px;border-right:1px solid var(--line)}.conversation-list h1{font:42px Georgia;margin:10px 0 24px}.conversation-list>button{display:flex;width:100%;flex-direction:column;gap:5px;padding:16px;text-align:left;background:transparent;color:var(--ink);border:1px solid transparent}.conversation-list>button.selected{background:white;border-color:var(--line)}.conversation-list>button span{color:var(--muted);font-weight:400}.message-panel{display:flex;min-width:0;flex-direction:column;padding:32px}.message-feed{display:flex;flex:1;flex-direction:column;justify-content:flex-end;gap:10px}.message{align-self:flex-start;max-width:min(70%,620px);margin:0;padding:12px 15px;background:white;border:1px solid var(--line);line-height:1.45}.message.mine{align-self:flex-end;background:var(--ink);color:white}.message-form{display:flex;gap:10px;margin-top:24px}.message-form textarea{min-height:70px;flex:1;resize:vertical;padding:14px;border:1px solid var(--line);font:inherit}@media(max-width:700px){.inbox-shell{grid-template-columns:1fr}.conversation-list{border-right:0;border-bottom:1px solid var(--line)}.message-panel{min-height:500px;padding:20px}.message{max-width:88%}.message-form{align-items:stretch;flex-direction:column}}
 .listing-city {
   color: var(--muted);
   font-size: 12px;
