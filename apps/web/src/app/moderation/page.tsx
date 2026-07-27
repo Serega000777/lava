@@ -36,13 +36,18 @@ export default function ModerationPage() {
   }, []);
 
   async function decide(caseId: string, decision: "approved" | "rejected" | "changes_requested") {
+    const reasonCode = {
+      approved: "policy_compliant",
+      rejected: "misleading_content",
+      changes_requested: "content_issue",
+    }[decision];
     const response = await fetch(`${apiUrl}/moderation/cases/${caseId}/decision`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         decision,
-        reason_code: decision === "approved" ? "policy_compliant" : "content_issue",
+        reason_code: reasonCode,
         comment: "",
       }),
     });

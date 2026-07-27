@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from app.models import ModerationCase
 from app.moderation.schemas import DecisionRequest
-from app.moderation.service import claim_case
+from app.moderation.service import claim_case, decide_case
 
 
 def test_decision_schema_rejects_unknown_action() -> None:
@@ -36,3 +36,18 @@ async def test_claim_rejects_other_moderator() -> None:
         await claim_case(db, uuid.uuid4(), uuid.uuid4())
     assert error.value.detail["code"] == "case_already_claimed"
 
+
+@pytest.mark.asyncio
+async def test_decision_rejects_reason_from_another_policy_branch() -> None:
+    with pytest.raises(HTTPException) as error:
+        await decide_case(
+            AsyncMock(),
+            uuid.uuid4(),
+            uuid.uuid4(),
+            DecisionRequest(
+                decision="approved",
+                reason_code="prohibited_item",
+            ),
+        )
+    assert error.value.status_code == 422
+    assert error.value.detail["code"] == "invalid_reason_code"

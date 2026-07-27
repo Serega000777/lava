@@ -26,9 +26,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["assigned_to"], ["users.id"]),
         sa.ForeignKeyConstraint(["listing_id"], ["listings.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("listing_id"),
     )
     op.create_index("ix_moderation_cases_listing_id", "moderation_cases", ["listing_id"])
+    op.create_index(
+        "uq_moderation_cases_one_open_per_listing",
+        "moderation_cases",
+        ["listing_id"],
+        unique=True,
+        postgresql_where=sa.text("status = 'open'"),
+    )
     op.create_index("ix_moderation_cases_status", "moderation_cases", ["status"])
     op.create_index("ix_moderation_cases_assigned_to", "moderation_cases", ["assigned_to"])
     op.create_table(
@@ -51,4 +57,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("moderation_decisions")
     op.drop_table("moderation_cases")
-

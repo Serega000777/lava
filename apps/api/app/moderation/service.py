@@ -14,6 +14,12 @@ LISTING_STATUS = {
     "changes_requested": "draft",
 }
 
+DECISION_REASON_CODES = {
+    "approved": frozenset({"policy_compliant"}),
+    "rejected": frozenset({"prohibited_item", "fraud_risk", "duplicate", "misleading_content"}),
+    "changes_requested": frozenset({"missing_details", "invalid_category", "image_quality", "content_issue"}),
+}
+
 
 async def locked_case(db: AsyncSession, case_id: uuid.UUID) -> ModerationCase:
     case = await db.scalar(
@@ -44,6 +50,11 @@ async def decide_case(
     moderator_id: uuid.UUID,
     data: DecisionRequest,
 ) -> tuple[ModerationCase, Listing]:
+    if data.reason_code not in DECISION_REASON_CODES[data.decision]:
+        raise HTTPException(
+            422,
+            detail={"code": "invalid_reason_code", "decision": data.decision},
+        )
     case = await locked_case(db, case_id)
     if case.status != "open":
         raise HTTPException(409, detail={"code": "case_already_decided"})
@@ -67,4 +78,3 @@ async def decide_case(
     await db.refresh(case)
     await db.refresh(listing)
     return case, listing
-

@@ -4,5 +4,6 @@ Every submitted listing creates one moderation case. Moderators may claim open c
 
 Decisions are append-only audit records. Approval activates the listing, rejection marks it rejected, and a change request returns it to draft. Concurrent claim and decision operations lock the case row; a case claimed by another moderator cannot be decided.
 
-Ordinary users cannot access the moderation API. Ownership and moderation authorization are separate controls.
+A corrected draft may be submitted again and receives a new case. The database permits historical cases but enforces at most one open case per listing.
 
+Ordinary users cannot access the moderation API. Ownership and moderation authorization are separate controls.

@@ -26,6 +26,7 @@ Search and Discovery — ready to start after Moderation review.
 - Migration 0003, seeded attributes and listing ownership/lifecycle pass in Docker.
 - Moderation queue, claims, decisions and append-only audit records are implemented.
 - Migration 0004 and role/decision/audit behavior pass in Docker.
+- Pre-merge audit fixed repeat moderation cycles and constrained decision reason codes.
 
 ## In progress
 
@@ -88,3 +89,6 @@ None for the foundation.
 - Duplicate decision — 409.
 - Immutable audit rows — 1.
 - Alembic version — `0004`.
+- Audit regression: changes requested → corrected draft → resubmit → approve passed.
+- Historical cases/decisions — 2/2; only one open case is permitted.
+- Invalid reason code — 422.
