@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.security import hash_token
+from app.auth.permissions import has_permission
 from app.db import session_factory
 from app.models import Session, User
 
@@ -34,3 +35,14 @@ async def current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail={"code": "invalid_session"})
     return user
 
+
+def require_permission(permission: str) -> Callable:
+    async def dependency(user: User = Depends(current_user)) -> User:
+        if not has_permission(user.role, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "permission_denied"},
+            )
+        return user
+
+    return dependency

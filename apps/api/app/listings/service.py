@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.listings.schemas import ListingCreate, ListingUpdate
-from app.models import Category, CategoryAttribute, Listing
+from app.models import Category, CategoryAttribute, Listing, ModerationCase
 
 
 async def create_draft(db: AsyncSession, owner_id: uuid.UUID, data: ListingCreate) -> Listing:
@@ -56,6 +56,7 @@ async def submit_draft(db: AsyncSession, listing: Listing) -> Listing:
             detail={"code": "listing_incomplete", "missing_fields": missing_fields},
         )
     listing.status = "pending_moderation"
+    db.add(ModerationCase(listing_id=listing.id))
     await db.commit()
     await db.refresh(listing)
     return listing

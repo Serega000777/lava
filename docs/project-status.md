@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Moderation — ready to start after Listings review.
+Search and Discovery — ready to start after Moderation review.
 
 ## Completed
 
@@ -24,6 +24,9 @@ Moderation — ready to start after Listings review.
 - Category attributes, owner-scoped listing drafts and the moderation-submit transition are implemented.
 - The web app includes an authenticated draft-creation flow.
 - Migration 0003, seeded attributes and listing ownership/lifecycle pass in Docker.
+- Moderation queue, claims, decisions and append-only audit records are implemented.
+- Migration 0004 and role/decision/audit behavior pass in Docker.
+- Pre-merge audit fixed repeat moderation cycles and constrained decision reason codes.
 
 ## In progress
 
@@ -35,8 +38,8 @@ None.
 
 ## Next tasks
 
-- Review and merge the Listings PR.
-- Implement moderation queue, decisions, reasons and audit history.
+- Review and merge the Moderation PR.
+- Add public active-listing discovery, filters and PostgreSQL search adapter.
 
 ## Known limitations
 
@@ -76,4 +79,16 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-25: local web 1 passed; local API 8 passed; frontend build and Docker Listings integration passed.
+2026-07-25: local API 11 passed; frontend checks/build and Docker Moderation integration passed.
+
+## Moderation verification
+
+- Ordinary user queue access — 403.
+- Moderator claim and approve — passed.
+- Listing transitioned to active — passed.
+- Duplicate decision — 409.
+- Immutable audit rows — 1.
+- Alembic version — `0004`.
+- Audit regression: changes requested → corrected draft → resubmit → approve passed.
+- Historical cases/decisions — 2/2; only one open case is permitted.
+- Invalid reason code — 422.
