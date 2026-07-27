@@ -3,16 +3,12 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
+import { ListingCard, PublicListing } from "../../components/listing-card";
 
-type Listing = { id: string; title: string; description: string; price: string | null; city: string };
-type SearchResponse = { items: Listing[]; total: number };
+type SearchResponse = { items: PublicListing[]; total: number };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const pageSize = 24;
-
-function formatPrice(price: string | null) {
-  return price === null ? "Цена по запросу" : `${new Intl.NumberFormat("ru-RU").format(Number(price))} ₽`;
-}
 
 function SearchResults() {
   const params = useSearchParams();
@@ -24,6 +20,9 @@ function SearchResults() {
   const [result, setResult] = useState<SearchResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteBusy, setFavoriteBusy] = useState<Set<string>>(new Set());
+  const [favoriteMessage, setFavoriteMessage] = useState("");
 
   const load = useCallback(async (q: string, order: string, start: number) => {
     const search = new URLSearchParams({ q, sort: order, limit: String(pageSize), offset: String(start) });
@@ -42,7 +41,43 @@ function SearchResults() {
     // This effect synchronizes the page with the URL's initial search query.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load(initialQuery, "relevance", 0);
+    void fetch(`${apiUrl}/favorites`, { credentials: "include" }).then(async (response) => {
+      if (response.ok) {
+        const favorites = await response.json() as PublicListing[];
+        setFavoriteIds(new Set(favorites.map((listing) => listing.id)));
+      }
+    });
   }, [initialQuery, load]);
+
+  async function toggleFavorite(listingId: string, isFavorite: boolean) {
+    setFavoriteBusy((current) => new Set(current).add(listingId));
+    setFavoriteMessage("");
+    try {
+      const response = await fetch(`${apiUrl}/favorites/${listingId}`, {
+        method: isFavorite ? "DELETE" : "PUT",
+        credentials: "include",
+      });
+      if (response.status === 401) {
+        setFavoriteMessage("Войдите, чтобы сохранять объявления.");
+        return;
+      }
+      if (!response.ok) throw new Error("favorite failed");
+      setFavoriteIds((current) => {
+        const next = new Set(current);
+        if (isFavorite) next.delete(listingId);
+        else next.add(listingId);
+        return next;
+      });
+    } catch {
+      setFavoriteMessage("Не удалось обновить избранное.");
+    } finally {
+      setFavoriteBusy((current) => {
+        const next = new Set(current);
+        next.delete(listingId);
+        return next;
+      });
+    }
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,19 +136,19 @@ function SearchResults() {
           </label>
         </div>
         {error && <p className="results-message" role="alert">{error}</p>}
+        {favoriteMessage && <p className="favorite-message" role="status">{favoriteMessage}</p>}
         {!loading && !error && result?.items.length === 0 && (
           <div className="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте изменить запрос или посмотреть все объявления.</p></div>
         )}
         <div className="listing-grid" aria-busy={loading}>
           {result?.items.map((listing) => (
-            <article className="listing-card" key={listing.id}>
-              <div className="listing-placeholder" aria-hidden="true">Lava.</div>
-              <div className="listing-body">
-                <p className="listing-city">{listing.city}</p><h2>{listing.title}</h2>
-                <p>{listing.description || "Продавец пока не добавил описание."}</p>
-                <strong>{formatPrice(listing.price)}</strong>
-              </div>
-            </article>
+            <ListingCard
+              key={listing.id}
+              listing={listing}
+              favorite={favoriteIds.has(listing.id)}
+              favoriteBusy={favoriteBusy.has(listing.id)}
+              onFavorite={toggleFavorite}
+            />
           ))}
         </div>
         {(hasPrevious || hasNext) && (

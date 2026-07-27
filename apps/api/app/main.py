@@ -11,6 +11,7 @@ from app.auth.router import router as auth_router
 from app.listings.router import router as listings_router
 from app.moderation.router import router as moderation_router
 from app.search.router import router as search_router
+from app.favorites.router import router as favorites_router
 
 
 @asynccontextmanager
@@ -23,13 +24,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
 )
 app.include_router(auth_router)
 app.include_router(listings_router)
 app.include_router(moderation_router)
 app.include_router(search_router)
+app.include_router(favorites_router)
 
 
 @app.get("/health", tags=["system"])

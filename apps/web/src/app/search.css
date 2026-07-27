@@ -46,6 +46,24 @@
   font: 32px Georgia;
 }
 .listing-body { padding: 20px; }
+.listing-body { position: relative; }
+.favorite-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+}
+.favorite-button.is-favorite { color: #b6422e; }
+.favorite-button:disabled { opacity: .45; }
+.favorite-message {
+  margin: -12px 0 22px;
+  color: var(--muted);
+}
 .listing-city {
   color: var(--muted);
   font-size: 12px;
