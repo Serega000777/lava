@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Favorites, Messaging and Notifications — Favorites verified and ready for review.
+Favorites, Messaging and Notifications — Messaging verified and ready for review.
 
 ## Completed
 
@@ -119,3 +119,18 @@ None for the foundation.
 - API tests — 18 passed.
 - Frontend lint, typecheck, 3 tests and production build — passed.
 - Docker Favorites page — 200.
+- Favorites PR merged into `main`.
+- Listing-scoped conversations, idempotent messages and transactional notifications are implemented.
+- Responsive inbox UI and seller contact action are implemented.
+
+## Messaging verification
+
+- Alembic version — `0007`.
+- Conversation and message retries preserve one row and identifier.
+- Changed payload for an existing client message key — 409.
+- Foreign conversation access — 404.
+- One created message and two transactional recipient notifications persisted.
+- Notification kinds — `new_conversation`, `new_message`.
+- Duplicate `(sender_id, client_message_id)` rows — zero.
+- Notification read transition — passed.
+- Messages page — 200.

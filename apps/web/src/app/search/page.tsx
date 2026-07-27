@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import { ListingCard, PublicListing } from "../../components/listing-card";
 
@@ -12,6 +12,7 @@ const pageSize = 24;
 
 function SearchResults() {
   const params = useSearchParams();
+  const router = useRouter();
   const initialQuery = params.get("q") ?? "";
   const [query, setQuery] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
@@ -77,6 +78,29 @@ function SearchResults() {
         return next;
       });
     }
+  }
+
+  async function startConversation(listingId: string) {
+    const response = await fetch(`${apiUrl}/conversations`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listing_id: listingId }),
+    });
+    if (response.status === 401) {
+      setFavoriteMessage("Войдите, чтобы написать продавцу.");
+      return;
+    }
+    if (response.status === 409) {
+      setFavoriteMessage("Нельзя начать диалог со своим объявлением.");
+      return;
+    }
+    if (!response.ok) {
+      setFavoriteMessage("Не удалось открыть диалог.");
+      return;
+    }
+    const conversation = await response.json() as { id: string };
+    router.push(`/messages?conversation=${conversation.id}`);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -148,6 +172,7 @@ function SearchResults() {
               favorite={favoriteIds.has(listing.id)}
               favoriteBusy={favoriteBusy.has(listing.id)}
               onFavorite={toggleFavorite}
+              onMessage={startConversation}
             />
           ))}
         </div>

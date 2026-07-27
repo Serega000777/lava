@@ -4,6 +4,7 @@ import SearchPage from "./page";
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams("q=велосипед"),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 describe("SearchPage", () => {

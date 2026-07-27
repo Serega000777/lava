@@ -1,0 +1,93 @@
+import uuid
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import current_user, get_db
+from app.messaging.schemas import (
+    ConversationCreate,
+    ConversationResponse,
+    ConversationSummary,
+    MessageCreate,
+    MessageResponse,
+    NotificationResponse,
+)
+from app.messaging.service import (
+    create_conversation,
+    list_conversations,
+    list_messages,
+    list_notifications,
+    mark_notification_read,
+    participant_conversation,
+    send_message,
+)
+from app.models import User
+
+router = APIRouter(tags=["messaging"])
+
+
+@router.post("/conversations", response_model=ConversationResponse)
+async def start_conversation(
+    data: ConversationCreate,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await create_conversation(db, user.id, data.listing_id)
+
+
+@router.get("/conversations", response_model=list[ConversationSummary])
+async def conversations(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await list_conversations(db, user.id, limit, offset)
+
+
+@router.get("/conversations/{conversation_id}/messages", response_model=list[MessageResponse])
+async def messages(
+    conversation_id: uuid.UUID,
+    limit: int = Query(default=100, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    conversation = await participant_conversation(db, conversation_id, user.id)
+    return await list_messages(db, conversation.id, limit, offset)
+
+
+@router.post(
+    "/conversations/{conversation_id}/messages",
+    response_model=MessageResponse,
+    status_code=201,
+)
+async def create_message(
+    conversation_id: uuid.UUID,
+    data: MessageCreate,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    conversation = await participant_conversation(db, conversation_id, user.id)
+    return await send_message(
+        db, conversation, user.id, data.client_message_id, data.body
+    )
+
+
+@router.get("/notifications", response_model=list[NotificationResponse])
+async def notifications(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await list_notifications(db, user.id, limit, offset)
+
+
+@router.patch("/notifications/{notification_id}/read", response_model=NotificationResponse)
+async def read_notification(
+    notification_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await mark_notification_read(db, notification_id, user.id)
