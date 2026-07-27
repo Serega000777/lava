@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const categories = [
   { icon: "↗", title: "Автомобили", text: "Проверенная история и честные карточки" },
   { icon: "◇", title: "Товары", text: "От техники до вещей для дома" },
@@ -18,9 +20,9 @@ export default function Home() {
         <p className="eyebrow">ЧЕСТНЫЕ ОБЪЯВЛЕНИЯ РЯДОМ</p>
         <h1>Находите нужное.<br /><em>Без лишнего шума.</em></h1>
         <p className="lead">Органическая выдача по качеству, проверенные продавцы и AI, который помогает — но не приукрашивает факты.</p>
-        <form className="search" role="search">
+        <form className="search" role="search" action="/search" method="get">
           <label className="sr-only" htmlFor="query">Поиск объявлений</label>
-          <input id="query" placeholder="Что вы ищете?" />
+          <input id="query" name="q" placeholder="Что вы ищете?" />
           <button type="submit">Найти</button>
         </form>
         <div className="proof"><span>✓ Без платного поднятия</span><span>✓ AI-контент отмечен</span><span>✓ Прозрачные правила</span></div>
@@ -38,4 +40,3 @@ export default function Home() {
     </main>
   );
 }
-import Link from "next/link";

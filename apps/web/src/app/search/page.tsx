@@ -1,0 +1,137 @@
+"use client";
+
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
+
+type Listing = { id: string; title: string; description: string; price: string | null; city: string };
+type SearchResponse = { items: Listing[]; total: number };
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const pageSize = 24;
+
+function formatPrice(price: string | null) {
+  return price === null ? "Цена по запросу" : `${new Intl.NumberFormat("ru-RU").format(Number(price))} ₽`;
+}
+
+function SearchResults() {
+  const params = useSearchParams();
+  const initialQuery = params.get("q") ?? "";
+  const [query, setQuery] = useState(initialQuery);
+  const [activeQuery, setActiveQuery] = useState(initialQuery);
+  const [sort, setSort] = useState("relevance");
+  const [offset, setOffset] = useState(0);
+  const [result, setResult] = useState<SearchResponse | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async (q: string, order: string, start: number) => {
+    const search = new URLSearchParams({ q, sort: order, limit: String(pageSize), offset: String(start) });
+    try {
+      const response = await fetch(`${apiUrl}/search/listings?${search}`);
+      if (!response.ok) throw new Error("search failed");
+      setResult(await response.json() as SearchResponse);
+    } catch {
+      setError("Не удалось загрузить объявления. Попробуйте ещё раз.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // This effect synchronizes the page with the URL's initial search query.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load(initialQuery, "relevance", 0);
+  }, [initialQuery, load]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+    setActiveQuery(query);
+    setOffset(0);
+    window.history.replaceState(null, "", query ? `/search?q=${encodeURIComponent(query)}` : "/search");
+    void load(query, sort, 0);
+  }
+
+  function changeSort(nextSort: string) {
+    setSort(nextSort);
+    setOffset(0);
+    setLoading(true);
+    setError("");
+    void load(activeQuery, nextSort, 0);
+  }
+
+  function changePage(nextOffset: number) {
+    setOffset(nextOffset);
+    setLoading(true);
+    setError("");
+    void load(activeQuery, sort, nextOffset);
+  }
+
+  const hasPrevious = offset > 0;
+  const hasNext = result !== null && offset + result.items.length < result.total;
+
+  return (
+    <main>
+      <header className="nav">
+        <Link className="brand" href="/" aria-label="Lava, главная">Lava<span>.</span></Link>
+        <div className="actions">
+          <Link className="button-link ghost" href="/login">Войти</Link>
+          <Link className="button-link" href="/listings/new">Разместить объявление</Link>
+        </div>
+      </header>
+      <section className="results-shell">
+        <p className="eyebrow">ПОИСК ПО ОБЪЯВЛЕНИЯМ</p>
+        <h1>{activeQuery ? `Результаты для «${activeQuery}»` : "Все объявления"}</h1>
+        <form className="search results-search" role="search" onSubmit={submit}>
+          <label className="sr-only" htmlFor="search-query">Поиск объявлений</label>
+          <input id="search-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Что вы ищете?" />
+          <button type="submit">Найти</button>
+        </form>
+        <div className="results-toolbar">
+          <p>{loading ? "Ищем…" : `Найдено: ${result?.total ?? 0}`}</p>
+          <label>Сортировка
+            <select value={sort} onChange={(event) => changeSort(event.target.value)}>
+              <option value="relevance">По релевантности</option>
+              <option value="newest">Сначала новые</option>
+              <option value="price_asc">Сначала дешевле</option>
+              <option value="price_desc">Сначала дороже</option>
+            </select>
+          </label>
+        </div>
+        {error && <p className="results-message" role="alert">{error}</p>}
+        {!loading && !error && result?.items.length === 0 && (
+          <div className="empty-state"><h2>Ничего не найдено</h2><p>Попробуйте изменить запрос или посмотреть все объявления.</p></div>
+        )}
+        <div className="listing-grid" aria-busy={loading}>
+          {result?.items.map((listing) => (
+            <article className="listing-card" key={listing.id}>
+              <div className="listing-placeholder" aria-hidden="true">Lava.</div>
+              <div className="listing-body">
+                <p className="listing-city">{listing.city}</p><h2>{listing.title}</h2>
+                <p>{listing.description || "Продавец пока не добавил описание."}</p>
+                <strong>{formatPrice(listing.price)}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
+        {(hasPrevious || hasNext) && (
+          <nav className="pagination" aria-label="Страницы результатов">
+            <button disabled={!hasPrevious || loading} onClick={() => changePage(Math.max(0, offset - pageSize))}>← Назад</button>
+            <span>Страница {Math.floor(offset / pageSize) + 1}</span>
+            <button disabled={!hasNext || loading} onClick={() => changePage(offset + pageSize)}>Вперёд →</button>
+          </nav>
+        )}
+      </section>
+    </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<main><section className="results-shell"><p>Загружаем объявления…</p></section></main>}>
+      <SearchResults />
+    </Suspense>
+  );
+}

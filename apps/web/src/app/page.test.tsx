@@ -8,6 +8,7 @@ describe("Home", () => {
     expect(screen.getByText("Автомобили")).toBeInTheDocument();
     expect(screen.getByText("Товары")).toBeInTheDocument();
     expect(screen.getByText("Услуги")).toBeInTheDocument();
+    expect(screen.getByRole("search")).toHaveAttribute("action", "/search");
+    expect(screen.getByLabelText("Поиск объявлений")).toHaveAttribute("name", "q");
   });
 });
-
