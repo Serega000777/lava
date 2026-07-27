@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Search and Discovery — ready to start after Moderation review.
+Search and Discovery — verified and ready for review.
 
 ## Completed
 
@@ -27,6 +27,9 @@ Search and Discovery — ready to start after Moderation review.
 - Moderation queue, claims, decisions and append-only audit records are implemented.
 - Migration 0004 and role/decision/audit behavior pass in Docker.
 - Pre-merge audit fixed repeat moderation cycles and constrained decision reason codes.
+- Public active-listing search, filters, sorting and bounded pagination are implemented.
+- PostgreSQL search is isolated behind an application port and backed by trigram indexes.
+- The home search and responsive results page are connected to the API.
 
 ## In progress
 
@@ -39,7 +42,7 @@ None.
 ## Next tasks
 
 - Review and merge the Moderation PR.
-- Add public active-listing discovery, filters and PostgreSQL search adapter.
+- Verify and publish the Search and Discovery slice.
 
 ## Known limitations
 
@@ -79,7 +82,7 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-25: local API 11 passed; frontend checks/build and Docker Moderation integration passed.
+2026-07-27: local API 16 passed; frontend lint, typecheck, tests and production build passed.
 
 ## Moderation verification
 
@@ -92,3 +95,13 @@ None for the foundation.
 - Audit regression: changes requested → corrected draft → resubmit → approve passed.
 - Historical cases/decisions — 2/2; only one open case is permitted.
 - Invalid reason code — 422.
+
+## Search verification
+
+- Alembic version — `0005`.
+- Active-only public discovery — passed; drafts are excluded.
+- Text query, case-insensitive city filter and price sorting — passed.
+- Bounded offset pagination — passed.
+- Literal SQL wildcard handling — passed.
+- Public DTO omits owner, status and internal update timestamp.
+- Search page and homepage form regression tests — 2 passed.

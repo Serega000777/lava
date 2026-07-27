@@ -1,0 +1,108 @@
+.results-shell {
+  min-height: calc(100vh - 78px);
+  padding: 64px max(6vw, 24px) 100px;
+}
+.results-shell > h1 {
+  margin: 14px 0 30px;
+  font: clamp(40px, 6vw, 72px) / 1 Georgia;
+}
+.results-search { margin: 0 0 34px; }
+.results-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.results-toolbar p { font-weight: 700; }
+.results-toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.results-toolbar select {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: white;
+}
+.listing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.listing-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #f9f7f1;
+}
+.listing-placeholder {
+  display: grid;
+  height: 170px;
+  place-items: center;
+  background: #dedbd1;
+  color: #858278;
+  font: 32px Georgia;
+}
+.listing-body { padding: 20px; }
+.listing-city {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.listing-body h2 {
+  margin: 8px 0;
+  font: 28px / 1.1 Georgia;
+}
+.listing-body > p:not(.listing-city) {
+  display: -webkit-box;
+  min-height: 42px;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.listing-body strong {
+  display: block;
+  margin-top: 20px;
+  font-size: 20px;
+}
+.empty-state,
+.results-message {
+  margin: 20px 0;
+  padding: 40px;
+  border: 1px solid var(--line);
+  background: #f9f7f1;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 36px;
+}
+.pagination button:disabled { opacity: .45; }
+.pagination span {
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .listing-grid { grid-template-columns: 1fr; }
+  .results-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .results-toolbar label {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .results-search input { min-width: 0; }
+  .results-shell { padding-top: 42px; }
+}
