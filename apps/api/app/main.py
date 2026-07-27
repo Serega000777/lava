@@ -14,6 +14,7 @@ from app.search.router import router as search_router
 from app.favorites.router import router as favorites_router
 from app.messaging.router import router as messaging_router
 from app.reviews.router import router as reviews_router
+from app.ai.router import router as ai_router
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.include_router(search_router)
 app.include_router(favorites_router)
 app.include_router(messaging_router)
 app.include_router(reviews_router)
+app.include_router(ai_router)
 
 
 @app.get("/health", tags=["system"])

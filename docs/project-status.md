@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Reviews and Reputation — verified and ready for review.
+AI Assistance and Credits — verified and ready for review.
 
 ## Completed
 
@@ -149,3 +149,20 @@ None for the foundation.
 - API tests — 27 passed.
 - Frontend lint, typecheck, 4 tests and production build — passed.
 - Docker Messages page with reputation UI — 200.
+- Reviews and Reputation PR merged into `main`.
+- Provider-isolated text assistance, idempotent credit reservation and explicit acceptance are implemented.
+- Accepted AI fields are labeled in public listing cards.
+
+## AI and credits verification
+
+- Alembic version — `0009`.
+- First access welcome balance — 10; one generation balance — 9.
+- Repeated client request UUID — same generation and one debit.
+- Explicit acceptance is idempotent and marks `title,description` as AI-assisted.
+- Source defect text remained present after assistance.
+- Ledger rows — one grant and one debit; direct UPDATE blocked by PostgreSQL trigger.
+- Provider output limits trigger a compensating refund path.
+- API tests — 29 passed.
+- Frontend lint, typecheck, 4 tests and production build — passed.
+- Docker AI listing page — 200.
+- External OpenAI adapter — intentionally pending API credentials and evaluation set.

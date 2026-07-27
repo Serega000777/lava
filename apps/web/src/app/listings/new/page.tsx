@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 type Attribute = { key: string; label: string; value_type: string; is_required: boolean; options: string[] | null };
 type Category = { id: string; name: string; attributes: Attribute[] };
+type Generation = { id: string; output: { title: string; description: string } | null };
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function NewListingPage() {
@@ -12,12 +13,21 @@ export default function NewListingPage() {
   const [categoryId, setCategoryId] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [listingId, setListingId] = useState("");
+  const [generation, setGeneration] = useState<Generation | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
 
   useEffect(() => {
     fetch(`${apiUrl}/categories`)
       .then((response) => response.json())
       .then((data: Category[]) => setCategories(data))
       .catch(() => setMessage("Не удалось загрузить категории"));
+  }, []);
+
+  useEffect(() => {
+    fetch(`${apiUrl}/credits`, { credentials: "include" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => setCredits(data?.balance ?? null));
   }, []);
 
   async function create(event: FormEvent<HTMLFormElement>) {
@@ -56,8 +66,43 @@ export default function NewListingPage() {
       return;
     }
     const listing = await response.json() as { id: string };
+    setListingId(listing.id);
     setMessage(`Черновик сохранён: ${listing.id}`);
-    event.currentTarget.reset();
+  }
+
+  async function improve() {
+    setLoading(true);
+    const response = await fetch(`${apiUrl}/listings/${listingId}/ai/text`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ client_request_id: crypto.randomUUID() }),
+    });
+    setLoading(false);
+    if (response.status === 402) {
+      setMessage("Недостаточно AI-кредитов.");
+      return;
+    }
+    if (!response.ok) {
+      setMessage("Не удалось подготовить предложение.");
+      return;
+    }
+    setGeneration(await response.json() as Generation);
+    setCredits((current) => current === null ? null : current - 1);
+  }
+
+  async function accept() {
+    if (!generation) return;
+    const response = await fetch(`${apiUrl}/ai/generations/${generation.id}/accept`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      setMessage("Не удалось применить AI-предложение.");
+      return;
+    }
+    setMessage("AI-предложение применено и отмечено в объявлении.");
+    setGeneration(null);
   }
 
   return (
@@ -92,6 +137,20 @@ export default function NewListingPage() {
         <button disabled={loading}>{loading ? "Сохраняем…" : "Сохранить черновик"}</button>
         {message && <p role="status">{message}</p>}
       </form>
+      {listingId && (
+        <section className="ai-assistant">
+          <p className="eyebrow">AI-ПОМОЩНИК · КРЕДИТОВ: {credits ?? "—"}</p>
+          <p>Помощник улучшает структуру текста, но не добавляет характеристики и не скрывает недостатки.</p>
+          <button disabled={loading} onClick={improve}>Предложить улучшение · 1 кредит</button>
+          {generation?.output && (
+            <div className="ai-preview">
+              <h2>{generation.output.title}</h2>
+              <p>{generation.output.description}</p>
+              <button onClick={accept}>Применить и отметить как AI-assisted</button>
+            </div>
+          )}
+        </section>
+      )}
     </section></main>
   );
 }
