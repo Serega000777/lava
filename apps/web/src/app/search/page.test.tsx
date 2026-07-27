@@ -10,9 +10,9 @@ describe("SearchPage", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("loads and renders public search results", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn().mockImplementation(async (url: string) => ({
       ok: true,
-      json: async () => ({
+      json: async () => url.includes("/favorites") ? [] : ({
         total: 1,
         limit: 24,
         offset: 0,
@@ -27,7 +27,7 @@ describe("SearchPage", () => {
           created_at: "2026-07-27T00:00:00Z",
         }],
       }),
-    });
+    }));
     vi.stubGlobal("fetch", fetchMock);
 
     render(<SearchPage />);

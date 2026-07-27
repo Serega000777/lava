@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Search and Discovery — verified and ready for review.
+Favorites, Messaging and Notifications — Favorites verified and ready for review.
 
 ## Completed
 
@@ -30,6 +30,9 @@ Search and Discovery — verified and ready for review.
 - Public active-listing search, filters, sorting and bounded pagination are implemented.
 - PostgreSQL search is isolated behind an application port and backed by trigram indexes.
 - The home search and responsive results page are connected to the API.
+- Search and Discovery PR merged into `main`.
+- Private, idempotent active-listing favorites API is implemented.
+- Search cards and the dedicated Favorites page share one reusable listing card.
 
 ## In progress
 
@@ -42,7 +45,7 @@ None.
 ## Next tasks
 
 - Review and merge the Moderation PR.
-- Verify and publish the Search and Discovery slice.
+- Verify and publish Favorites, then implement conversations and notifications.
 
 ## Known limitations
 
@@ -105,3 +108,14 @@ None for the foundation.
 - Literal SQL wildcard handling — passed.
 - Public DTO omits owner, status and internal update timestamp.
 - Search page and homepage form regression tests — 2 passed.
+
+## Favorites verification
+
+- Alembic version — `0006`.
+- Guest read — 401.
+- Duplicate `PUT` — one database row.
+- Repeated `DELETE` — 204 and an empty collection.
+- Favorite rows are private to the authenticated session.
+- API tests — 18 passed.
+- Frontend lint, typecheck, 3 tests and production build — passed.
+- Docker Favorites page — 200.

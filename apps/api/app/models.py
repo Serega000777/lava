@@ -119,6 +119,20 @@ class Listing(Base):
     )
 
 
+class Favorite(Base):
+    __tablename__ = "favorites"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    listing_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
 class ModerationCase(Base):
     __tablename__ = "moderation_cases"
     __table_args__ = (
