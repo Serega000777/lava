@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import { apiFetch } from "../../../lib/api";
 
 type Attribute = { key: string; label: string; value_type: string; is_required: boolean; options: string[] | null };
 type Category = { id: string; name: string; attributes: Attribute[] };
@@ -43,7 +44,7 @@ export default function NewListingPage() {
         form.get(`attribute:${attribute.key}`),
       ]),
     );
-    const response = await fetch(`${apiUrl}/listings`, {
+    const response = await apiFetch(`${apiUrl}/listings`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -72,7 +73,7 @@ export default function NewListingPage() {
 
   async function improve() {
     setLoading(true);
-    const response = await fetch(`${apiUrl}/listings/${listingId}/ai/text`, {
+    const response = await apiFetch(`${apiUrl}/listings/${listingId}/ai/text`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -93,7 +94,7 @@ export default function NewListingPage() {
 
   async function accept() {
     if (!generation) return;
-    const response = await fetch(`${apiUrl}/ai/generations/${generation.id}/accept`, {
+    const response = await apiFetch(`${apiUrl}/ai/generations/${generation.id}/accept`, {
       method: "POST",
       credentials: "include",
     });

@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import secrets
+
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from redis.asyncio import Redis
 from sqlalchemy import select
@@ -19,6 +21,22 @@ from app.models import Session, User
 
 router = APIRouter()
 COOKIE_NAME = "lava_session"
+CSRF_COOKIE_NAME = "lava_csrf"
+
+
+@router.get("/auth/csrf")
+async def csrf(response: Response) -> dict[str, str]:
+    token = secrets.token_urlsafe(32)
+    response.set_cookie(
+        CSRF_COOKIE_NAME,
+        token,
+        max_age=3600,
+        httponly=False,
+        secure=settings.app_env == "production",
+        samesite="lax",
+        path="/",
+    )
+    return {"token": token}
 
 
 def set_session_cookie(response: Response, token: str) -> None:
@@ -108,4 +126,3 @@ async def update_me(
     await db.commit()
     await db.refresh(user)
     return user
-

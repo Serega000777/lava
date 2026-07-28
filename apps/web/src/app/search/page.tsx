@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useCallback, useEffect, useState } from "react";
 import { ListingCard, PublicListing } from "../../components/listing-card";
+import { apiFetch } from "../../lib/api";
 
 type SearchResponse = { items: PublicListing[]; total: number };
 
@@ -54,7 +55,7 @@ function SearchResults() {
     setFavoriteBusy((current) => new Set(current).add(listingId));
     setFavoriteMessage("");
     try {
-      const response = await fetch(`${apiUrl}/favorites/${listingId}`, {
+      const response = await apiFetch(`${apiUrl}/favorites/${listingId}`, {
         method: isFavorite ? "DELETE" : "PUT",
         credentials: "include",
       });
@@ -81,7 +82,7 @@ function SearchResults() {
   }
 
   async function startConversation(listingId: string) {
-    const response = await fetch(`${apiUrl}/conversations`, {
+    const response = await apiFetch(`${apiUrl}/conversations`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

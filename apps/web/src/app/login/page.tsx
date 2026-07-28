@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { apiFetch } from "../../lib/api";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -15,7 +16,7 @@ export default function LoginPage() {
     setMessage("");
     const data = new FormData(event.currentTarget);
     try {
-      const response = await fetch(`${apiUrl}/auth/login/password`, {
+      const response = await apiFetch(`${apiUrl}/auth/login/password`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -44,4 +45,3 @@ export default function LoginPage() {
     </section></main>
   );
 }
-

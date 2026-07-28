@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, Suspense, useEffect, useState } from "react";
+import { apiFetch } from "../../lib/api";
 
 type Conversation = {
   id: string;
@@ -68,7 +69,7 @@ function Inbox() {
     const form = new FormData(event.currentTarget);
     const body = String(form.get("body") ?? "").trim();
     if (!body || !selectedId) return;
-    const response = await fetch(`${apiUrl}/conversations/${selectedId}/messages`, {
+    const response = await apiFetch(`${apiUrl}/conversations/${selectedId}/messages`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -86,7 +87,7 @@ function Inbox() {
   async function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const response = await fetch(`${apiUrl}/conversations/${selectedId}/review`, {
+    const response = await apiFetch(`${apiUrl}/conversations/${selectedId}/review`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
