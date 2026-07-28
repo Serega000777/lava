@@ -2,7 +2,7 @@
 
 ## Current phase
 
-AI Assistance and Credits — verified and ready for review.
+Analytics and Production Hardening — verified and ready for review.
 
 ## Completed
 
@@ -166,3 +166,18 @@ None for the foundation.
 - Frontend lint, typecheck, 4 tests and production build — passed.
 - Docker AI listing page — 200.
 - External OpenAI adapter — intentionally pending API credentials and evaluation set.
+- AI Assistance and Credits PR merged into `main`.
+- Truthful seller and permission-gated administrator analytics are implemented.
+- API request IDs and baseline API/Web security headers are implemented.
+
+## Analytics and hardening verification
+
+- Seller metrics returned exactly one owned listing and no foreign rows.
+- Metrics use durable favorites, conversations, messages and reviews only.
+- Ordinary user access to administrator aggregates — 403.
+- Administrator aggregate users/listings — passed.
+- API response includes generated `X-Request-ID` and `nosniff`.
+- Web response includes `X-Frame-Options: DENY`.
+- Analytics page — 200.
+- API tests — 30 passed.
+- Frontend lint, typecheck, 5 tests and production build — passed.

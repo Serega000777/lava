@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
+import uuid
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from sqlalchemy import text
@@ -15,6 +16,7 @@ from app.favorites.router import router as favorites_router
 from app.messaging.router import router as messaging_router
 from app.reviews.router import router as reviews_router
 from app.ai.router import router as ai_router
+from app.analytics.router import router as analytics_router
 
 
 @asynccontextmanager
@@ -38,6 +40,18 @@ app.include_router(favorites_router)
 app.include_router(messaging_router)
 app.include_router(reviews_router)
 app.include_router(ai_router)
+app.include_router(analytics_router)
+
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    request_id = str(uuid.uuid4())
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
 
 
 @app.get("/health", tags=["system"])
