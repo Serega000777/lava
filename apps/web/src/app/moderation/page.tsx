@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { apiFetch } from "../../lib/api";
 
 type Case = { id: string; listing_id: string; status: string; assigned_to: string | null };
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -41,7 +42,7 @@ export default function ModerationPage() {
       rejected: "misleading_content",
       changes_requested: "content_issue",
     }[decision];
-    const response = await fetch(`${apiUrl}/moderation/cases/${caseId}/decision`, {
+    const response = await apiFetch(`${apiUrl}/moderation/cases/${caseId}/decision`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

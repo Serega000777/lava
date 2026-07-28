@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ListingCard, PublicListing } from "../../components/listing-card";
+import { apiFetch } from "../../lib/api";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -26,7 +27,7 @@ export default function FavoritesPage() {
   }, []);
 
   async function remove(listingId: string) {
-    const response = await fetch(`${apiUrl}/favorites/${listingId}`, {
+    const response = await apiFetch(`${apiUrl}/favorites/${listingId}`, {
       method: "DELETE",
       credentials: "include",
     });

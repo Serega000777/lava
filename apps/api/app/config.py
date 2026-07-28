@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     sms_otp_enabled: bool = False
     vk_oauth_enabled: bool = False
     allowed_origins: str = "http://localhost:3000"
+    auth_rate_limit: int = 20
+    auth_rate_window_seconds: int = 60
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
