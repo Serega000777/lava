@@ -52,6 +52,14 @@
   object-fit: cover;
   background: #dedbd1;
 }
+.report-button {
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  color: #655f55;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .listing-body { padding: 20px; }
 .listing-body { position: relative; }
 .favorite-button {

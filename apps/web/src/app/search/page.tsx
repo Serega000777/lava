@@ -104,6 +104,30 @@ function SearchResults() {
     router.push(`/messages?conversation=${conversation.id}`);
   }
 
+  async function reportListing(listingId: string) {
+    const response = await apiFetch(`${apiUrl}/listings/${listingId}/complaints`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_request_id: crypto.randomUUID(),
+        reason_code: "misleading_content",
+        details: "",
+      }),
+    });
+    if (response.status === 401) {
+      setFavoriteMessage("Войдите, чтобы отправить жалобу.");
+      return;
+    }
+    if (response.status === 409) {
+      setFavoriteMessage("Нельзя пожаловаться на собственное объявление.");
+      return;
+    }
+    setFavoriteMessage(
+      response.ok ? "Жалоба отправлена на проверку." : "Не удалось отправить жалобу.",
+    );
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -174,6 +198,7 @@ function SearchResults() {
               favoriteBusy={favoriteBusy.has(listing.id)}
               onFavorite={toggleFavorite}
               onMessage={startConversation}
+              onReport={reportListing}
             />
           ))}
         </div>

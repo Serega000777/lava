@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Listing Media — verified and ready for review.
+Complaints and Appeals — verified and ready for review.
 
 ## Completed
 
@@ -35,6 +35,7 @@ Listing Media — verified and ready for review.
 - Search cards and the dedicated Favorites page share one reusable listing card.
 - Listing images are normalized to metadata-free WebP, stored in private S3-compatible
   storage and exposed publicly only for active listings.
+- Authenticated listing complaints and independent owner appeals are implemented.
 
 ## In progress
 
@@ -46,7 +47,8 @@ None.
 
 ## Next tasks
 
-- Add complaints and appeals after the media slice.
+- Add complaint rate limits before public beta.
+- Implement verification levels and public trust badges.
 
 ## Known limitations
 
@@ -86,9 +88,24 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-29: API Ruff passed; 39 API tests passed; frontend lint, strict typecheck,
-6 tests and production build passed; Docker Compose configuration validated;
-migration 0010 applied successfully.
+2026-07-29: API Ruff passed; 46 API tests passed; frontend lint, strict typecheck,
+7 tests and production build passed; Docker Compose configuration validated;
+migrations through 0011 applied successfully.
+
+## Complaints and appeals verification
+
+- Migration 0011 applied successfully.
+- Self-complaints and complaints against non-active listings are rejected.
+- Complaint retries are idempotent; changed payload reuse returns a conflict.
+- Complaint decisions use bounded decision/resolution pairs and row locking.
+- Confirmed listing restrictions archive the listing transactionally.
+- Appeals require listing ownership and an appealable moderation decision.
+- The original moderator cannot review the appeal.
+- Overturned appeals create a new moderation case instead of publishing directly.
+- Moderator UI exposes separate listing, complaint and appeal queues.
+- Search cards expose an authenticated complaint action.
+- API Ruff and 46 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 7 tests and production build passed.
 
 ## Listing media verification
 

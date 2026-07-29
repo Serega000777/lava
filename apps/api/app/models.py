@@ -341,3 +341,64 @@ class ModerationDecision(Base):
     reason_code: Mapped[str] = mapped_column(String(64))
     comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+
+
+class Complaint(Base):
+    __tablename__ = "complaints"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'resolved', 'dismissed')"),
+        CheckConstraint(
+            "reason_code IN ('fraud', 'prohibited_item', 'duplicate', "
+            "'misleading_content', 'wrong_category', 'other')"
+        ),
+        CheckConstraint("reporter_id <> listing_owner_id"),
+        UniqueConstraint("reporter_id", "client_request_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    listing_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), index=True
+    )
+    listing_owner_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reporter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    client_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    reason_code: Mapped[str] = mapped_column(String(64))
+    details: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    resolution_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    resolution_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ModerationAppeal(Base):
+    __tablename__ = "moderation_appeals"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'upheld', 'overturned')"),
+        UniqueConstraint("case_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("moderation_cases.id", ondelete="CASCADE")
+    )
+    appellant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reason: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    resolution_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

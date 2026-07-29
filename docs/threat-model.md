@@ -12,4 +12,9 @@ processing, allowlisted outbound integrations, nonce-based CSP, edge volumetric
 protection, automated security scanning and verified backup/incident-response
 procedures. See `production-hardening.md` for deployment requirements.
 
+Complaint abuse is constrained by authentication, self-report prevention,
+bounded reason codes and idempotency keys. Appeals require listing ownership and
+independent moderator review. Public-beta hardening still requires per-account
+complaint rate limits and detection of coordinated false reporting.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

@@ -16,14 +16,22 @@ type Props = {
   favoriteBusy?: boolean;
   onFavorite?: (listingId: string, favorite: boolean) => void;
   onMessage?: (listingId: string) => void;
+  onReport?: (listingId: string) => void;
 };
 
 function formatPrice(price: string | null) {
-  return price === null ? "Цена по запросу" : `${new Intl.NumberFormat("ru-RU").format(Number(price))} ₽`;
+  return price === null
+    ? "Цена по запросу"
+    : `${new Intl.NumberFormat("ru-RU").format(Number(price))} ₽`;
 }
 
 export function ListingCard({
-  listing, favorite = false, favoriteBusy = false, onFavorite, onMessage,
+  listing,
+  favorite = false,
+  favoriteBusy = false,
+  onFavorite,
+  onMessage,
+  onReport,
 }: Props) {
   return (
     <article className="listing-card">
@@ -50,11 +58,20 @@ export function ListingCard({
           </button>
         )}
         <p className="listing-city">{listing.city}</p>
-        {listing.ai_generated_fields?.length ? <span className="ai-label">AI-assisted</span> : null}
+        {listing.ai_generated_fields?.length ? <span className="ai-label">Создано с AI</span> : null}
         <h2>{listing.title}</h2>
         <p>{listing.description || "Продавец пока не добавил описание."}</p>
         <strong>{formatPrice(listing.price)}</strong>
-        {onMessage && <button className="message-button" onClick={() => onMessage(listing.id)}>Написать</button>}
+        {onMessage && (
+          <button className="message-button" onClick={() => onMessage(listing.id)}>
+            Написать
+          </button>
+        )}
+        {onReport && (
+          <button className="ghost report-button" onClick={() => onReport(listing.id)}>
+            Пожаловаться
+          </button>
+        )}
       </div>
     </article>
   );
