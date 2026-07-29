@@ -1,8 +1,11 @@
 import uuid
+import asyncio
 
 from fastapi import APIRouter, Depends, Response
+from botocore.exceptions import ClientError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.auth.dependencies import current_user, get_db
 from app.listings.schemas import (
@@ -13,9 +16,11 @@ from app.listings.schemas import (
     ListingUpdate,
 )
 from app.listings.service import create_draft, owned_listing, submit_draft, update_draft
-from app.models import Category, CategoryAttribute, Listing, User
+from app.media.storage import S3Storage
+from app.models import Category, CategoryAttribute, Listing, ListingMedia, User
 
 router = APIRouter()
+logger = structlog.get_logger("lava.listings")
 
 
 @router.get("/categories", response_model=list[CategoryResponse])
@@ -83,7 +88,15 @@ async def delete_listing(
     if listing.status != "draft":
         from fastapi import HTTPException
         raise HTTPException(409, detail={"code": "listing_not_deletable"})
+    object_keys = list((await db.scalars(
+        select(ListingMedia.object_key).where(ListingMedia.listing_id == listing.id)
+    )).all())
     await db.delete(listing)
     await db.commit()
+    storage = S3Storage()
+    for object_key in object_keys:
+        try:
+            await asyncio.to_thread(storage.delete, object_key)
+        except ClientError:
+            logger.exception("orphaned_media_object", object_key=object_key)
     return Response(status_code=204)
-

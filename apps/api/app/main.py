@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import time
 import uuid
 
@@ -21,6 +22,8 @@ from app.messaging.router import router as messaging_router
 from app.reviews.router import router as reviews_router
 from app.ai.router import router as ai_router
 from app.analytics.router import router as analytics_router
+from app.media.router import router as media_router
+from app.media.storage import S3Storage
 from app.security import (
     UNSAFE_METHODS,
     auth_rate_limit_exceeded,
@@ -40,6 +43,7 @@ logger = structlog.get_logger("lava.api")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await asyncio.to_thread(S3Storage().ensure_bucket)
     yield
 
 
@@ -60,6 +64,7 @@ app.include_router(messaging_router)
 app.include_router(reviews_router)
 app.include_router(ai_router)
 app.include_router(analytics_router)
+app.include_router(media_router)
 
 
 @app.middleware("http")

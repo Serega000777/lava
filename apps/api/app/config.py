@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000"
     auth_rate_limit: int = 20
     auth_rate_window_seconds: int = 60
+    s3_endpoint: str = "http://localhost:9000"
+    s3_access_key: str = "lava"
+    s3_secret_key: str = "lava_local_secret"
+    s3_bucket: str = "media"
+    media_max_bytes: int = 10 * 1024 * 1024
+    media_max_per_listing: int = 10
+    media_max_pixels: int = 20_000_000
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

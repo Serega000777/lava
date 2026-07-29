@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Analytics and Production Hardening — verified and ready for review.
+Listing Media — verified and ready for review.
 
 ## Completed
 
@@ -33,6 +33,8 @@ Analytics and Production Hardening — verified and ready for review.
 - Search and Discovery PR merged into `main`.
 - Private, idempotent active-listing favorites API is implemented.
 - Search cards and the dedicated Favorites page share one reusable listing card.
+- Listing images are normalized to metadata-free WebP, stored in private S3-compatible
+  storage and exposed publicly only for active listings.
 
 ## In progress
 
@@ -44,16 +46,15 @@ None.
 
 ## Next tasks
 
-- Review and merge the Moderation PR.
-- Verify and publish Favorites, then implement conversations and notifications.
+- Add complaints and appeals after the media slice.
 
 ## Known limitations
 
-Production SMS and VK providers are disabled. CSRF tokens and account recovery are scheduled before public beta.
+Production SMS and VK providers are disabled. Account recovery is scheduled before public beta.
 
 ## Technical debt
 
-Queue implementation, request IDs, metrics and S3 bucket bootstrap must be completed in the next infrastructure slice.
+Queue implementation and metrics remain for the next infrastructure slice.
 
 ## Decisions needed from owner
 
@@ -85,7 +86,20 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-27: local API 16 passed; frontend lint, typecheck, tests and production build passed.
+2026-07-29: API Ruff passed; 39 API tests passed; frontend lint, strict typecheck,
+6 tests and production build passed; Docker Compose configuration validated;
+migration 0010 applied successfully.
+
+## Listing media verification
+
+- Migration 0010 applied successfully.
+- JPEG, PNG and WebP inputs are decoded by content and normalized to WebP.
+- EXIF metadata is removed and pixel/file limits are enforced.
+- Image normalization runs outside the async event loop.
+- Failed metadata transactions roll back before best-effort S3 cleanup.
+- Private draft media is excluded from the public media endpoint by query design.
+- API Ruff and 39 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 6 tests and production build passed.
 
 ## Moderation verification
 

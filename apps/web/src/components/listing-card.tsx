@@ -7,6 +7,7 @@ export type PublicListing = {
   price: string | null;
   city: string;
   ai_generated_fields?: string[];
+  cover_image_url?: string | null;
 };
 
 type Props = {
@@ -26,7 +27,16 @@ export function ListingCard({
 }: Props) {
   return (
     <article className="listing-card">
-      <div className="listing-placeholder" aria-hidden="true">Lava.</div>
+      {listing.cover_image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="listing-image"
+          src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}${listing.cover_image_url}`}
+          alt=""
+        />
+      ) : (
+        <div className="listing-placeholder" aria-hidden="true">Lava.</div>
+      )}
       <div className="listing-body">
         {onFavorite && (
           <button

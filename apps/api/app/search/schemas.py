@@ -31,6 +31,7 @@ class PublicListingResponse(BaseModel):
     city: str
     attributes: dict[str, object]
     ai_generated_fields: list[str]
+    cover_image_url: str | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 

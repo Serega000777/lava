@@ -120,6 +120,28 @@ class Listing(Base):
     )
 
 
+class ListingMedia(Base):
+    __tablename__ = "listing_media"
+    __table_args__ = (
+        CheckConstraint("position BETWEEN 0 AND 9"),
+        CheckConstraint("size_bytes > 0"),
+        UniqueConstraint("listing_id", "position"),
+        UniqueConstraint("object_key"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    listing_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), index=True
+    )
+    object_key: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column()
+    width: Mapped[int] = mapped_column()
+    height: Mapped[int] = mapped_column()
+    position: Mapped[int] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Favorite(Base):
     __tablename__ = "favorites"
 

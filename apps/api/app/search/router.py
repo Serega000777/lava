@@ -2,11 +2,13 @@ import uuid
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import get_db
 from app.search.postgres import PostgresListingSearch
 from app.search.schemas import PublicListingResponse, SearchQuery, SearchResponse
+from app.models import ListingMedia
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -28,7 +30,21 @@ async def search_listings(
         price_max=price_max, sort=sort, limit=limit, offset=offset,
     )
     items, total = await PostgresListingSearch(db).search(query)
+    listing_ids = [item.id for item in items]
+    media = [] if not listing_ids else list((await db.scalars(
+        select(ListingMedia)
+        .where(ListingMedia.listing_id.in_(listing_ids))
+        .order_by(ListingMedia.listing_id, ListingMedia.position)
+    )).all())
+    covers: dict[uuid.UUID, str] = {}
+    for item in media:
+        covers.setdefault(item.listing_id, f"/media/{item.id}")
     return SearchResponse(
-        items=[PublicListingResponse.model_validate(item) for item in items],
+        items=[
+            PublicListingResponse.model_validate(item).model_copy(
+                update={"cover_image_url": covers.get(item.id)}
+            )
+            for item in items
+        ],
         total=total, limit=limit, offset=offset,
     )
