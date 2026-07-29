@@ -76,6 +76,29 @@ class Session(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class VerificationDecision(Base):
+    __tablename__ = "verification_decisions"
+    __table_args__ = (
+        CheckConstraint("previous_level BETWEEN 0 AND 4"),
+        CheckConstraint("new_level BETWEEN 0 AND 4"),
+        CheckConstraint("previous_level <> new_level"),
+        CheckConstraint("source IN ('phone_otp', 'admin_review')"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    source: Mapped[str] = mapped_column(String(32))
+    previous_level: Mapped[int] = mapped_column(SmallInteger)
+    new_level: Mapped[int] = mapped_column(SmallInteger)
+    reason_code: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CategoryAttribute(Base):
     __tablename__ = "category_attributes"
     __table_args__ = (

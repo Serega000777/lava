@@ -8,3 +8,7 @@ Endpoints: `POST /auth/register/password`, `POST /auth/login/password`, `POST /a
 
 Never enable or return the local OTP code in production.
 
+Successful OTP verification raises the account to phone-verified level and writes
+an append-only verification decision. Higher identity levels and public badges
+are documented in `verification.md`; password registration alone does not prove
+control of the supplied phone number.

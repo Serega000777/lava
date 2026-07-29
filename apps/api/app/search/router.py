@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_db
 from app.search.postgres import PostgresListingSearch
 from app.search.schemas import PublicListingResponse, SearchQuery, SearchResponse
-from app.models import ListingMedia
+from app.models import ListingMedia, User
+from app.verification.service import trust_badge
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -39,10 +40,26 @@ async def search_listings(
     covers: dict[uuid.UUID, str] = {}
     for item in media:
         covers.setdefault(item.listing_id, f"/media/{item.id}")
+    owner_ids = {item.owner_id for item in items}
+    owners = {} if not owner_ids else {
+        owner.id: owner
+        for owner in (await db.scalars(select(User).where(User.id.in_(owner_ids)))).all()
+    }
     return SearchResponse(
         items=[
             PublicListingResponse.model_validate(item).model_copy(
-                update={"cover_image_url": covers.get(item.id)}
+                update={
+                    "cover_image_url": covers.get(item.id),
+                    "seller_id": item.owner_id,
+                    "seller_name": owners[item.owner_id].display_name if item.owner_id in owners else None,
+                    "seller_trust_badge": (
+                        trust_badge(
+                            owners[item.owner_id].verification_level,
+                            owners[item.owner_id].role,
+                        )
+                        if item.owner_id in owners else None
+                    ),
+                }
             )
             for item in items
         ],

@@ -17,7 +17,7 @@ from app.auth.service import (
     authenticate_password, create_session, register_password, request_otp, verify_otp,
 )
 from app.config import settings
-from app.models import Session, User
+from app.models import Session, User, VerificationDecision
 
 router = APIRouter()
 COOKIE_NAME = "lava_session"
@@ -93,8 +93,19 @@ async def otp_verify(
     if not user:
         user = User(phone=data.phone, display_name=data.display_name)
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        await db.flush()
+    if user.verification_level < 1:
+        db.add(VerificationDecision(
+            user_id=user.id,
+            actor_id=None,
+            source="phone_otp",
+            previous_level=user.verification_level,
+            new_level=1,
+            reason_code="phone_confirmed",
+        ))
+        user.verification_level = 1
+    await db.commit()
+    await db.refresh(user)
     set_session_cookie(response, await create_session(db, user))
     return AuthResponse(user=UserResponse.model_validate(user))
 

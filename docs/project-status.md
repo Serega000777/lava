@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Complaints and Appeals — verified and ready for review.
+Verification and Trust Badges — verified and ready for review.
 
 ## Completed
 
@@ -36,6 +36,7 @@ Complaints and Appeals — verified and ready for review.
 - Listing images are normalized to metadata-free WebP, stored in private S3-compatible
   storage and exposed publicly only for active listings.
 - Authenticated listing complaints and independent owner appeals are implemented.
+- Phone verification, audited level decisions and public trust badges are implemented.
 
 ## In progress
 
@@ -48,7 +49,8 @@ None.
 ## Next tasks
 
 - Add complaint rate limits before public beta.
-- Implement verification levels and public trust badges.
+- Verify migration 0012 and public DTO privacy.
+- Add production identity provider only after owner legal/security decision.
 
 ## Known limitations
 
@@ -60,7 +62,8 @@ Queue implementation and metrics remain for the next infrastructure slice.
 
 ## Decisions needed from owner
 
-None for the foundation.
+- Select and legally review a production identity/liveness provider before
+  enabling document or biometric verification.
 
 ## Last verified commands
 
@@ -88,9 +91,23 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-29: API Ruff passed; 46 API tests passed; frontend lint, strict typecheck,
-7 tests and production build passed; Docker Compose configuration validated;
-migrations through 0011 applied successfully.
+2026-07-29: API Ruff passed; 50 API tests passed; frontend lint, strict typecheck,
+8 tests and production build passed; Docker Compose configuration validated;
+migrations through 0013 applied successfully.
+
+## Verification and trust badge verification
+
+- Successful OTP raises an account to phone-verified level.
+- Password registration alone leaves the account unverified.
+- Administrator level changes lock the user row and create an attributed decision.
+- Organization level is rejected for non-company accounts.
+- Verification decisions are protected from update/delete by a PostgreSQL trigger.
+- Public trust profile schema excludes phone, reviewer and evidence data.
+- Search cards display centrally derived seller badges without affecting ranking.
+- Profile UI renders human-readable verification levels.
+- API Ruff and 50 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 8 tests and production build passed.
+- Migrations 0012 and 0013 applied; the append-only trigger exists in PostgreSQL.
 
 ## Complaints and appeals verification
 

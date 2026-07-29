@@ -8,6 +8,9 @@ export type PublicListing = {
   city: string;
   ai_generated_fields?: string[];
   cover_image_url?: string | null;
+  seller_id?: string | null;
+  seller_name?: string | null;
+  seller_trust_badge?: string | null;
 };
 
 type Props = {
@@ -58,6 +61,12 @@ export function ListingCard({
           </button>
         )}
         <p className="listing-city">{listing.city}</p>
+        {listing.seller_name && (
+          <p className="seller-trust">
+            <span>{listing.seller_name}</span>
+            {listing.seller_trust_badge && <strong>{listing.seller_trust_badge}</strong>}
+          </p>
+        )}
         {listing.ai_generated_fields?.length ? <span className="ai-label">Создано с AI</span> : null}
         <h2>{listing.title}</h2>
         <p>{listing.description || "Продавец пока не добавил описание."}</p>

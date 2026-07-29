@@ -60,6 +60,20 @@
   text-decoration: underline;
   cursor: pointer;
 }
+.seller-trust {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.seller-trust strong {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #e8f8c8;
+  color: #2f4b17;
+  font-size: 12px;
+}
 .listing-body { padding: 20px; }
 .listing-body { position: relative; }
 .favorite-button {

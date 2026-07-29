@@ -25,6 +25,7 @@ from app.analytics.router import router as analytics_router
 from app.media.router import router as media_router
 from app.media.storage import S3Storage
 from app.complaints.router import router as complaints_router
+from app.verification.router import router as verification_router
 from app.security import (
     UNSAFE_METHODS,
     auth_rate_limit_exceeded,
@@ -67,6 +68,7 @@ app.include_router(ai_router)
 app.include_router(analytics_router)
 app.include_router(media_router)
 app.include_router(complaints_router)
+app.include_router(verification_router)
 
 
 @app.middleware("http")
