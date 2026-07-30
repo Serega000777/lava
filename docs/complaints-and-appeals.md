@@ -20,4 +20,15 @@ the listing to `pending_moderation` and creates a new open case for independent
 review; it does not silently publish the listing.
 
 Public responses do not expose reporter identifiers, moderator comments or internal
-account data. Rate limits and abuse scoring remain required before public beta.
+account data.
+
+Complaint creation uses an atomic Redis script with two fixed-window limits: per
+account and per account/listing pair. A retry with the same client request UUID
+does not consume the limit again. Redis keys contain hashes instead of public
+identifiers. If Redis is unavailable, complaint creation fails closed while
+unrelated marketplace functions remain available.
+
+The defaults are 10 unique complaints per account and 3 per account/listing pair
+per 24 hours. Deployments may override all limits through environment settings.
+Coordinated multi-account abuse still requires behavioral detection and moderator
+tooling before public beta.

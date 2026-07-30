@@ -123,6 +123,14 @@ function SearchResults() {
       setFavoriteMessage("Нельзя пожаловаться на собственное объявление.");
       return;
     }
+    if (response.status === 429) {
+      setFavoriteMessage("Лимит жалоб исчерпан. Попробуйте позже.");
+      return;
+    }
+    if (response.status === 503) {
+      setFavoriteMessage("Защита жалоб временно недоступна. Попробуйте позже.");
+      return;
+    }
     setFavoriteMessage(
       response.ok ? "Жалоба отправлена на проверку." : "Не удалось отправить жалобу.",
     );

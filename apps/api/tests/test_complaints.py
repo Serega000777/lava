@@ -4,10 +4,12 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
+from redis.exceptions import ConnectionError as RedisConnectionError
 
+from app.complaints.router import report_listing
 from app.complaints.schemas import AppealCreate, AppealDecision, ComplaintCreate, ComplaintDecision
 from app.complaints.service import create_complaint, decide_appeal, decide_complaint
-from app.models import Complaint, Listing, ModerationAppeal
+from app.models import Complaint, Listing, ModerationAppeal, User
 
 
 def test_complaint_schema_rejects_unknown_reason() -> None:
@@ -156,3 +158,65 @@ async def test_original_moderator_cannot_review_appeal() -> None:
 
     assert error.value.status_code == 409
     assert error.value.detail["code"] == "independent_review_required"
+
+
+@pytest.mark.asyncio
+async def test_complaint_route_returns_retry_after_when_limited(monkeypatch) -> None:
+    async def limited(*_args) -> bool:
+        return True
+
+    redis = AsyncMock()
+    monkeypatch.setattr("app.complaints.router.Redis.from_url", lambda _url: redis)
+    monkeypatch.setattr("app.complaints.router.complaint_rate_limited", limited)
+    user = User(
+        id=uuid.uuid4(),
+        phone="+79990000003",
+        display_name="Покупатель",
+    )
+
+    with pytest.raises(HTTPException) as error:
+        await report_listing(
+            uuid.uuid4(),
+            ComplaintCreate(
+                client_request_id=uuid.uuid4(),
+                reason_code="fraud",
+            ),
+            user,
+            AsyncMock(),
+        )
+
+    assert error.value.status_code == 429
+    assert error.value.detail["code"] == "complaint_rate_limited"
+    assert error.value.headers is not None
+    assert "Retry-After" in error.value.headers
+    redis.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_complaint_route_fails_closed_without_redis(monkeypatch) -> None:
+    async def unavailable(*_args) -> bool:
+        raise RedisConnectionError("redis unavailable")
+
+    redis = AsyncMock()
+    monkeypatch.setattr("app.complaints.router.Redis.from_url", lambda _url: redis)
+    monkeypatch.setattr("app.complaints.router.complaint_rate_limited", unavailable)
+    user = User(
+        id=uuid.uuid4(),
+        phone="+79990000004",
+        display_name="Покупатель",
+    )
+
+    with pytest.raises(HTTPException) as error:
+        await report_listing(
+            uuid.uuid4(),
+            ComplaintCreate(
+                client_request_id=uuid.uuid4(),
+                reason_code="fraud",
+            ),
+            user,
+            AsyncMock(),
+        )
+
+    assert error.value.status_code == 503
+    assert error.value.detail["code"] == "security_dependency_unavailable"
+    redis.aclose.assert_awaited_once()

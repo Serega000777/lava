@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Verification and Trust Badges — verified and ready for review.
+Complaint Abuse Protection — verified and ready for review.
 
 ## Completed
 
@@ -37,6 +37,7 @@ Verification and Trust Badges — verified and ready for review.
   storage and exposed publicly only for active listings.
 - Authenticated listing complaints and independent owner appeals are implemented.
 - Phone verification, audited level decisions and public trust badges are implemented.
+- Atomic account and account/listing complaint rate limits are implemented.
 
 ## In progress
 
@@ -48,8 +49,8 @@ None.
 
 ## Next tasks
 
-- Add complaint rate limits before public beta.
-- Verify migration 0012 and public DTO privacy.
+- Add coordinated multi-account complaint abuse detection before public beta.
+- Implement secure account recovery and active-session management.
 - Add production identity provider only after owner legal/security decision.
 
 ## Known limitations
@@ -91,9 +92,22 @@ Queue implementation and metrics remain for the next infrastructure slice.
 
 ## Latest successful test run
 
-2026-07-29: API Ruff passed; 50 API tests passed; frontend lint, strict typecheck,
+2026-07-30: API Ruff passed; 56 API tests passed; frontend lint, strict typecheck,
 8 tests and production build passed; Docker Compose configuration validated;
 migrations through 0013 applied successfully.
+
+## Complaint abuse protection verification
+
+- Atomic Redis Lua script applies per-account and per account/listing limits.
+- Duplicate idempotency request UUIDs do not consume the limit twice.
+- Redis keys hash account, listing and request identifiers.
+- Limit responses return 429 with `Retry-After`.
+- Redis outages fail complaint creation closed with 503.
+- Search UI explains limit and temporary security dependency failures.
+- Real local Redis smoke check allowed a fresh complaint attempt.
+- API Ruff and 56 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 8 tests and production build passed.
+- Docker Compose configuration validated.
 
 ## Verification and trust badge verification
 

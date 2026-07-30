@@ -1,6 +1,8 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +15,8 @@ from app.complaints.schemas import (
     ComplaintDecision,
     ComplaintResponse,
 )
+from app.complaints.abuse import complaint_rate_limited
+from app.config import settings
 from app.complaints.service import (
     create_appeal,
     create_complaint,
@@ -35,6 +39,24 @@ async def report_listing(
     user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Complaint:
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        limited = await complaint_rate_limited(
+            redis, user.id, listing_id, data.client_request_id
+        )
+    except RedisError as error:
+        raise HTTPException(
+            503,
+            detail={"code": "security_dependency_unavailable"},
+        ) from error
+    finally:
+        await redis.aclose()
+    if limited:
+        raise HTTPException(
+            429,
+            detail={"code": "complaint_rate_limited"},
+            headers={"Retry-After": str(settings.complaint_rate_window_seconds)},
+        )
     return await create_complaint(db, listing_id, user.id, data)
 
 

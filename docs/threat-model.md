@@ -13,8 +13,9 @@ protection, automated security scanning and verified backup/incident-response
 procedures. See `production-hardening.md` for deployment requirements.
 
 Complaint abuse is constrained by authentication, self-report prevention,
-bounded reason codes and idempotency keys. Appeals require listing ownership and
-independent moderator review. Public-beta hardening still requires per-account
-complaint rate limits and detection of coordinated false reporting.
+bounded reason codes, idempotency keys and atomic per-account/per-target Redis
+limits. Complaint creation fails closed when the limiter is unavailable. Appeals
+require listing ownership and independent moderator review. Public-beta hardening
+still requires detection of coordinated multi-account false reporting.
 
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.
