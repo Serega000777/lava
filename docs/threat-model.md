@@ -18,4 +18,10 @@ limits. Complaint creation fails closed when the limiter is unavailable. Appeals
 require listing ownership and independent moderator review. Public-beta hardening
 still requires detection of coordinated multi-account false reporting.
 
+Account recovery uses purpose-bound, one-time, short-lived OTP values and the
+same fail-closed Redis rate limiter as login. Successful recovery revokes old
+sessions. Public/session DTOs never expose cookie tokens or hashes. Production
+hardening still requires an approved SMS provider, SIM-swap response policy and
+alerts for repeated recovery attempts.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

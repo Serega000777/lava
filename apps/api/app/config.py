@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000"
     auth_rate_limit: int = 20
     auth_rate_window_seconds: int = 60
+    otp_max_attempts: int = 5
     complaint_rate_limit: int = 10
     complaint_target_rate_limit: int = 3
     complaint_rate_window_seconds: int = 86_400

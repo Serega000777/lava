@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Complaint Abuse Protection — verified and ready for review.
+Account Recovery and Session Management — verified and ready for review.
 
 ## Completed
 
@@ -38,6 +38,7 @@ Complaint Abuse Protection — verified and ready for review.
 - Authenticated listing complaints and independent owner appeals are implemented.
 - Phone verification, audited level decisions and public trust badges are implemented.
 - Atomic account and account/listing complaint rate limits are implemented.
+- Purpose-bound password recovery and active-session management are implemented.
 
 ## In progress
 
@@ -50,12 +51,13 @@ None.
 ## Next tasks
 
 - Add coordinated multi-account complaint abuse detection before public beta.
-- Implement secure account recovery and active-session management.
 - Add production identity provider only after owner legal/security decision.
+- Add device/browser metadata to sessions after privacy review.
 
 ## Known limitations
 
-Production SMS and VK providers are disabled. Account recovery is scheduled before public beta.
+Production SMS and VK providers are disabled. Recovery currently uses the local
+OTP adapter and must not be enabled publicly until an approved SMS provider exists.
 
 ## Technical debt
 
@@ -92,9 +94,23 @@ Queue implementation and metrics remain for the next infrastructure slice.
 
 ## Latest successful test run
 
-2026-07-30: API Ruff passed; 56 API tests passed; frontend lint, strict typecheck,
-8 tests and production build passed; Docker Compose configuration validated;
+2026-07-31: API Ruff passed; 65 API tests passed; frontend lint, strict typecheck,
+9 tests and production build passed; Docker Compose configuration validated;
 migrations through 0013 applied successfully.
+
+## Account recovery and session verification
+
+- Login and recovery OTP values use separate Redis namespaces.
+- OTP expires after five minutes and is destroyed after five failed attempts.
+- Issuing a new OTP resets only that purpose's attempt counter.
+- Recovery endpoints are covered by the fail-closed auth rate limiter.
+- Successful password reset revokes every old session before issuing a new one.
+- Session DTO excludes token and token hash fields.
+- Users can revoke one non-current session or all other sessions.
+- Frontend provides recovery and active-session management flows.
+- API Ruff and 65 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 9 tests and production build passed.
+- Docker Compose configuration validated; migrations remain at 0013.
 
 ## Complaint abuse protection verification
 

@@ -41,6 +41,7 @@ export default function LoginPage() {
         <button disabled={loading}>{loading ? "Входим…" : "Войти"}</button>
         {message && <p role="alert" className="form-error">{message}</p>}
       </form>
+      <p><Link href="/recover">Забыли пароль?</Link></p>
       <p className="auth-note">SMS и VK будут доступны после подключения проверенных провайдеров.</p>
     </section></main>
   );

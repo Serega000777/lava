@@ -6,6 +6,12 @@ from pydantic import BaseModel, Field, field_validator
 PHONE_PATTERN = r"^\+[1-9]\d{7,14}$"
 
 
+def validate_password_strength(value: str) -> str:
+    if value.isalpha() or value.isdigit():
+        raise ValueError("password must contain letters and numbers")
+    return value
+
+
 class PasswordRegisterRequest(BaseModel):
     phone: str = Field(pattern=PHONE_PATTERN)
     display_name: str = Field(min_length=2, max_length=80)
@@ -14,9 +20,7 @@ class PasswordRegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, value: str) -> str:
-        if value.isalpha() or value.isdigit():
-            raise ValueError("password must contain letters and numbers")
-        return value
+        return validate_password_strength(value)
 
 
 class PasswordLoginRequest(BaseModel):
@@ -56,3 +60,24 @@ class OtpRequestResponse(BaseModel):
     status: str = "sent"
     dev_code: str | None = None
 
+
+class PasswordRecoveryRequest(BaseModel):
+    phone: str = Field(pattern=PHONE_PATTERN)
+
+
+class PasswordRecoveryConfirm(BaseModel):
+    phone: str = Field(pattern=PHONE_PATTERN)
+    code: str = Field(pattern=r"^\d{6}$")
+    new_password: str = Field(min_length=10, max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, value: str) -> str:
+        return validate_password_strength(value)
+
+
+class SessionResponse(BaseModel):
+    id: uuid.UUID
+    created_at: datetime
+    expires_at: datetime
+    is_current: bool
