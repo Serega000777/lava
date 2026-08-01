@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Account Recovery and Session Management — verified and ready for review.
+Coordinated Complaint Abuse Detection — verified and ready for review.
 
 ## Completed
 
@@ -39,6 +39,7 @@ Account Recovery and Session Management — verified and ready for review.
 - Phone verification, audited level decisions and public trust badges are implemented.
 - Atomic account and account/listing complaint rate limits are implemented.
 - Purpose-bound password recovery and active-session management are implemented.
+- Explainable, moderator-only coordinated complaint signals are implemented.
 
 ## In progress
 
@@ -50,9 +51,10 @@ None.
 
 ## Next tasks
 
-- Add coordinated multi-account complaint abuse detection before public beta.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
+- Add privacy-reviewed network/device correlation only if advisory complaint
+  signals prove insufficient during beta.
 
 ## Known limitations
 
@@ -94,9 +96,21 @@ Queue implementation and metrics remain for the next infrastructure slice.
 
 ## Latest successful test run
 
-2026-07-31: API Ruff passed; 65 API tests passed; frontend lint, strict typecheck,
-9 tests and production build passed; Docker Compose configuration validated;
-migrations through 0013 applied successfully.
+2026-08-01: API Ruff passed; 67 API tests passed using a freshly rebuilt image;
+frontend lint, strict typecheck, 9 tests and production build passed; Docker
+Compose configuration validated; no schema migration was required.
+
+## Coordinated complaint detection verification
+
+- A rolling 24-hour signal counts each reporter once per listing.
+- Warnings require at least two explainable indicators: reporter burst, reason
+  concentration or a cluster of accounts created during the previous seven days.
+- Signals are moderator-only and never trigger automatic enforcement.
+- Reporter identifiers and account creation timestamps remain server-side.
+- The moderation queue is bounded to at most 100 records per request.
+- API Ruff and 67 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 9 tests and production build passed.
+- Docker Compose configuration validated; no migration was required.
 
 ## Account recovery and session verification
 

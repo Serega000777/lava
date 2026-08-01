@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -8,7 +9,13 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 
 from app.complaints.router import report_listing
 from app.complaints.schemas import AppealCreate, AppealDecision, ComplaintCreate, ComplaintDecision
-from app.complaints.service import create_complaint, decide_appeal, decide_complaint
+from app.complaints.service import (
+    ComplaintSignalInput,
+    assess_complaint_coordination,
+    create_complaint,
+    decide_appeal,
+    decide_complaint,
+)
 from app.models import Complaint, Listing, ModerationAppeal, User
 
 
@@ -23,6 +30,40 @@ def test_complaint_schema_rejects_unknown_reason() -> None:
 def test_appeal_requires_substantive_reason() -> None:
     with pytest.raises(ValidationError):
         AppealCreate(case_id=uuid.uuid4(), reason="Не согласен")
+
+
+def test_coordination_signal_requires_multiple_explainable_indicators() -> None:
+    now = datetime.now(UTC)
+    reports = [
+        ComplaintSignalInput(uuid.uuid4(), "fraud", now - timedelta(days=1))
+        for _ in range(3)
+    ]
+
+    signal = assess_complaint_coordination(reports, now=now)
+
+    assert signal["detected"] is True
+    assert signal["reporter_count"] == 3
+    assert signal["indicators"] == [
+        "reporter_burst",
+        "reason_concentration",
+        "new_account_cluster",
+    ]
+
+
+def test_coordination_signal_deduplicates_reporters_and_avoids_weak_alerts() -> None:
+    now = datetime.now(UTC)
+    reporter_id = uuid.uuid4()
+    reports = [
+        ComplaintSignalInput(reporter_id, "fraud", now - timedelta(days=30)),
+        ComplaintSignalInput(reporter_id, "duplicate", now - timedelta(days=30)),
+    ]
+
+    signal = assess_complaint_coordination(reports, now=now)
+
+    assert signal["detected"] is False
+    assert signal["reporter_count"] == 1
+    assert signal["dominant_reason_code"] == "fraud"
+    assert signal["indicators"] == []
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,7 @@
 import uuid
-from datetime import UTC, datetime
+from collections import Counter
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -12,7 +14,124 @@ from app.complaints.schemas import (
     ComplaintCreate,
     ComplaintDecision,
 )
-from app.models import Complaint, Listing, ModerationAppeal, ModerationCase, ModerationDecision
+from app.models import (
+    Complaint,
+    Listing,
+    ModerationAppeal,
+    ModerationCase,
+    ModerationDecision,
+    User,
+)
+
+COORDINATION_WINDOW_HOURS = 24
+NEW_ACCOUNT_MAX_AGE_DAYS = 7
+MIN_COORDINATED_REPORTERS = 3
+
+
+@dataclass(frozen=True)
+class ComplaintSignalInput:
+    reporter_id: uuid.UUID
+    reason_code: str
+    account_created_at: datetime
+
+
+def assess_complaint_coordination(
+    reports: list[ComplaintSignalInput],
+    *,
+    now: datetime,
+) -> dict[str, object]:
+    unique_reports: dict[uuid.UUID, ComplaintSignalInput] = {}
+    for report in reports:
+        unique_reports.setdefault(report.reporter_id, report)
+    reporter_count = len(unique_reports)
+    reasons = Counter(report.reason_code for report in unique_reports.values())
+    dominant_reason_code: str | None = None
+    dominant_reason_count = 0
+    if reasons:
+        dominant_reason_code, dominant_reason_count = reasons.most_common(1)[0]
+    new_account_cutoff = now - timedelta(days=NEW_ACCOUNT_MAX_AGE_DAYS)
+    new_account_count = sum(
+        report.account_created_at >= new_account_cutoff for report in unique_reports.values()
+    )
+    indicators: list[str] = []
+    if reporter_count >= MIN_COORDINATED_REPORTERS:
+        indicators.append("reporter_burst")
+    if (
+        reporter_count >= MIN_COORDINATED_REPORTERS
+        and dominant_reason_count / reporter_count >= 0.8
+    ):
+        indicators.append("reason_concentration")
+    if new_account_count >= MIN_COORDINATED_REPORTERS:
+        indicators.append("new_account_cluster")
+    return {
+        "detected": len(indicators) >= 2,
+        "window_hours": COORDINATION_WINDOW_HOURS,
+        "reporter_count": reporter_count,
+        "dominant_reason_code": dominant_reason_code,
+        "dominant_reason_count": dominant_reason_count,
+        "new_account_reporter_count": new_account_count,
+        "indicators": indicators,
+    }
+
+
+async def list_complaints_for_moderation(
+    db: AsyncSession,
+    *,
+    complaint_status: str,
+    limit: int,
+    offset: int,
+) -> list[dict[str, object]]:
+    complaints = list(
+        (
+            await db.scalars(
+                select(Complaint)
+                .where(Complaint.status == complaint_status)
+                .order_by(Complaint.created_at, Complaint.id)
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+    )
+    if not complaints:
+        return []
+
+    now = datetime.now(UTC)
+    rows = (
+        await db.execute(
+            select(Complaint, User.created_at)
+            .join(User, User.id == Complaint.reporter_id)
+            .where(
+                Complaint.listing_id.in_({item.listing_id for item in complaints}),
+                Complaint.created_at >= now - timedelta(hours=COORDINATION_WINDOW_HOURS),
+            )
+            .order_by(Complaint.created_at, Complaint.id)
+        )
+    ).all()
+    reports_by_listing: dict[uuid.UUID, list[ComplaintSignalInput]] = {}
+    for complaint, account_created_at in rows:
+        reports_by_listing.setdefault(complaint.listing_id, []).append(
+            ComplaintSignalInput(
+                reporter_id=complaint.reporter_id,
+                reason_code=complaint.reason_code,
+                account_created_at=account_created_at,
+            )
+        )
+    return [
+        {
+            "id": item.id,
+            "listing_id": item.listing_id,
+            "reason_code": item.reason_code,
+            "details": item.details,
+            "status": item.status,
+            "resolution_code": item.resolution_code,
+            "created_at": item.created_at,
+            "resolved_at": item.resolved_at,
+            "coordination_signal": assess_complaint_coordination(
+                reports_by_listing.get(item.listing_id, []), now=now
+            ),
+        }
+        for item in complaints
+    ]
 
 COMPLAINT_RESOLUTION_CODES = {
     "resolved": frozenset({"listing_restricted", "user_warned"}),

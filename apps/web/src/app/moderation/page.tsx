@@ -11,6 +11,15 @@ type Complaint = {
   reason_code: string;
   details: string;
   status: string;
+  coordination_signal: {
+    detected: boolean;
+    window_hours: number;
+    reporter_count: number;
+    dominant_reason_code: string | null;
+    dominant_reason_count: number;
+    new_account_reporter_count: number;
+    indicators: string[];
+  };
 };
 type Appeal = {
   id: string;
@@ -156,6 +165,12 @@ export default function ModerationPage() {
                 <strong>{item.reason_code}</strong>
                 <small>{item.listing_id}</small>
                 {item.details && <p>{item.details}</p>}
+                {item.coordination_signal.detected && (
+                  <p className="coordination-warning" role="note">
+                    Возможна координация: {item.coordination_signal.reporter_count} жалобщика
+                    за {item.coordination_signal.window_hours} ч. Проверьте историю вручную.
+                  </p>
+                )}
               </div>
               <div className="moderation-actions">
                 <button className="danger" onClick={() => void decideComplaint(item.id, "resolved")}>

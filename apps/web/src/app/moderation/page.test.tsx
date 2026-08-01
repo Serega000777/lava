@@ -16,6 +16,15 @@ describe("ModerationPage", () => {
             reason_code: "fraud",
             details: "Просит предоплату вне платформы",
             status: "open",
+            coordination_signal: {
+              detected: true,
+              window_hours: 24,
+              reporter_count: 3,
+              dominant_reason_code: "fraud",
+              dominant_reason_count: 3,
+              new_account_reporter_count: 3,
+              indicators: ["reporter_burst", "reason_concentration", "new_account_cluster"],
+            },
           }];
         }
         if (url.includes("/appeals")) {
@@ -37,5 +46,6 @@ describe("ModerationPage", () => {
       .toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Жалобы" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Апелляции" })).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent("Возможна координация");
   });
 });

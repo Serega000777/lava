@@ -14,6 +14,7 @@ from app.complaints.schemas import (
     ComplaintCreate,
     ComplaintDecision,
     ComplaintResponse,
+    ModerationComplaintResponse,
 )
 from app.complaints.abuse import complaint_rate_limited
 from app.config import settings
@@ -22,6 +23,7 @@ from app.complaints.service import (
     create_complaint,
     decide_appeal,
     decide_complaint,
+    list_complaints_for_moderation,
 )
 from app.models import Complaint, ModerationAppeal, User
 
@@ -76,20 +78,19 @@ async def my_complaints(
     )
 
 
-@router.get("/moderation/complaints", response_model=list[ComplaintResponse])
+@router.get("/moderation/complaints", response_model=list[ModerationComplaintResponse])
 async def moderation_complaints(
     complaint_status: str = Query(default="open", alias="status", pattern="^(open|resolved|dismissed)$"),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     _: User = Depends(require_permission("moderation:read")),
     db: AsyncSession = Depends(get_db),
-) -> list[Complaint]:
-    return list(
-        (
-            await db.scalars(
-                select(Complaint)
-                .where(Complaint.status == complaint_status)
-                .order_by(Complaint.created_at)
-            )
-        ).all()
+) -> list[dict[str, object]]:
+    return await list_complaints_for_moderation(
+        db,
+        complaint_status=complaint_status,
+        limit=limit,
+        offset=offset,
     )
 
 

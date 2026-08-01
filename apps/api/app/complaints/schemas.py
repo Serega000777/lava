@@ -33,6 +33,20 @@ class ComplaintResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ComplaintCoordinationSignal(BaseModel):
+    detected: bool
+    window_hours: int
+    reporter_count: int
+    dominant_reason_code: str | None
+    dominant_reason_count: int
+    new_account_reporter_count: int
+    indicators: list[str]
+
+
+class ModerationComplaintResponse(ComplaintResponse):
+    coordination_signal: ComplaintCoordinationSignal
+
+
 class ComplaintDecision(BaseModel):
     decision: Literal["resolved", "dismissed"]
     resolution_code: Literal[

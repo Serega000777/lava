@@ -14,9 +14,11 @@ procedures. See `production-hardening.md` for deployment requirements.
 
 Complaint abuse is constrained by authentication, self-report prevention,
 bounded reason codes, idempotency keys and atomic per-account/per-target Redis
-limits. Complaint creation fails closed when the limiter is unavailable. Appeals
-require listing ownership and independent moderator review. Public-beta hardening
-still requires detection of coordinated multi-account false reporting.
+limits. Complaint creation fails closed when the limiter is unavailable. A
+moderator-only, explainable 24-hour signal highlights multi-account bursts without
+automatic enforcement or exposing reporter identifiers. Appeals require listing
+ownership and independent moderator review. Device and network correlation remain
+out of scope until privacy and legal review.
 
 Account recovery uses purpose-bound, one-time, short-lived OTP values and the
 same fail-closed Redis rate limiter as login. Successful recovery revokes old

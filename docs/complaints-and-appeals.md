@@ -30,5 +30,9 @@ unrelated marketplace functions remain available.
 
 The defaults are 10 unique complaints per account and 3 per account/listing pair
 per 24 hours. Deployments may override all limits through environment settings.
-Coordinated multi-account abuse still requires behavioral detection and moderator
-tooling before public beta.
+The moderator queue computes an advisory coordination signal across a rolling
+24-hour window. It combines a burst of at least three distinct reporters with
+reason concentration and/or at least three accounts created during the previous
+seven days. At least two indicators are required for a warning. The signal cannot
+automatically dismiss a complaint, restrict a listing or sanction an account, and
+reporter identifiers are not exposed to the browser.
