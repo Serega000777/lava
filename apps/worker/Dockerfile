@@ -1,7 +1,7 @@
 FROM python:3.13-slim
-WORKDIR /worker
+WORKDIR /app
 COPY apps/worker/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY apps/worker .
+COPY apps/api/app ./app
+COPY apps/worker/worker.py ./worker.py
 CMD ["python", "worker.py"]
-

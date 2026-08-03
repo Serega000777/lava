@@ -21,3 +21,6 @@ Public entities use UUIDs and timezone-aware timestamps. State changes are trans
 
 Docker Compose is the supported local path. Production will use separately managed PostgreSQL, Redis and S3-compatible storage without changing domain code. Search begins with PostgreSQL FTS/trigram behind an adapter.
 
+Background work uses a PostgreSQL transactional outbox as durable queue state.
+Workers claim rows with `SKIP LOCKED` and publish bounded notification streams to
+Redis. This avoids the commit/enqueue gap while preserving replaceable adapters.

@@ -242,6 +242,27 @@ class Notification(Base):
     )
 
 
+class OutboxTask(Base):
+    __tablename__ = "outbox_tasks"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'processing', 'completed', 'failed')"),
+        UniqueConstraint("topic", "source_key"),
+        Index("ix_outbox_tasks_dispatch", "status", "available_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    topic: Mapped[str] = mapped_column(String(64))
+    source_key: Mapped[str] = mapped_column(String(128))
+    payload: Mapped[dict[str, object]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    attempts: Mapped[int] = mapped_column(default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Review(Base):
     __tablename__ = "reviews"
     __table_args__ = (

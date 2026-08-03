@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Coordinated Complaint Abuse Detection — verified and ready for review.
+Transactional Outbox Queue and Metrics — verified and ready for review.
 
 ## Completed
 
@@ -40,6 +40,7 @@ Coordinated Complaint Abuse Detection — verified and ready for review.
 - Atomic account and account/listing complaint rate limits are implemented.
 - Purpose-bound password recovery and active-session management are implemented.
 - Explainable, moderator-only coordinated complaint signals are implemented.
+- Durable notification outbox, retrying worker and administrator queue metrics are implemented.
 
 ## In progress
 
@@ -63,7 +64,7 @@ OTP adapter and must not be enabled publicly until an approved SMS provider exis
 
 ## Technical debt
 
-Queue implementation and metrics remain for the next infrastructure slice.
+Structured metrics export and alert routing remain for production observability.
 
 ## Decisions needed from owner
 
@@ -96,9 +97,25 @@ Queue implementation and metrics remain for the next infrastructure slice.
 
 ## Latest successful test run
 
-2026-08-01: API Ruff passed; 67 API tests passed using a freshly rebuilt image;
-frontend lint, strict typecheck, 9 tests and production build passed; Docker
-Compose configuration validated; no schema migration was required.
+2026-08-03: API and worker Ruff passed; 72 API tests passed using freshly rebuilt
+images; frontend lint, strict typecheck, 9 tests and production build passed;
+Docker Compose configuration validated; migration 0014 is at head.
+
+## Transactional queue verification
+
+- Notification and outbox rows commit in the same database transaction.
+- Unique topic/source keys make enqueue retries idempotent.
+- Worker claims with `SKIP LOCKED`, recovers stale locks and applies bounded
+  exponential retries before terminal failure.
+- Redis Streams are bounded, user identifiers in stream keys are hashed and event
+  payloads exclude message bodies and profile data.
+- Administrator metrics expose backlog, failures, oldest pending age and heartbeat
+  health without failing when Redis metrics are unavailable.
+- A real outbox task completed in one attempt and appeared in Redis Stream; its
+  isolated smoke-test records were removed afterward.
+- API and worker Ruff passed; 72 API tests passed on freshly rebuilt images.
+- Frontend lint, strict typecheck, 9 tests and production build passed.
+- Docker Compose validated and Alembic reports `0014 (head)`.
 
 ## Coordinated complaint detection verification
 

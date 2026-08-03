@@ -26,4 +26,9 @@ sessions. Public/session DTOs never expose cookie tokens or hashes. Production
 hardening still requires an approved SMS provider, SIM-swap response policy and
 alerts for repeated recovery attempts.
 
+Background notification delivery uses a transactional outbox, bounded retry
+counts and stale-lock recovery. Worker logs exclude payloads; Redis Stream keys
+hash user identifiers and stream entries omit message bodies and profile data.
+Queue metrics require the administrator analytics permission.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

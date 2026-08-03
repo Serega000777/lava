@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from app.models import Conversation, Listing, Message, Notification, User
+from app.queueing.service import enqueue_notification_created
 
 
 async def participant_conversation(
@@ -59,17 +60,26 @@ async def create_conversation(
     if conversation is None:
         raise RuntimeError("conversation upsert failed")
     if created_id:
-        await db.execute(
+        notification_id = uuid.uuid4()
+        created_notification_id = await db.scalar(
             insert(Notification)
             .values(
-                id=uuid.uuid4(),
+                id=notification_id,
                 user_id=listing.owner_id,
                 kind="new_conversation",
                 source_key=f"conversation:{conversation.id}",
                 conversation_id=conversation.id,
             )
             .on_conflict_do_nothing(index_elements=["user_id", "source_key"])
+            .returning(Notification.id)
         )
+        if created_notification_id:
+            await enqueue_notification_created(
+                db,
+                notification_id=created_notification_id,
+                user_id=listing.owner_id,
+                kind="new_conversation",
+            )
     await db.commit()
     return conversation
 
@@ -114,17 +124,26 @@ async def send_message(
         recipient_id = (
             conversation.seller_id if sender_id == conversation.buyer_id else conversation.buyer_id
         )
-        await db.execute(
+        notification_id = uuid.uuid4()
+        created_notification_id = await db.scalar(
             insert(Notification)
             .values(
-                id=uuid.uuid4(),
+                id=notification_id,
                 user_id=recipient_id,
                 kind="new_message",
                 source_key=f"message:{message.id}",
                 conversation_id=conversation.id,
             )
             .on_conflict_do_nothing(index_elements=["user_id", "source_key"])
+            .returning(Notification.id)
         )
+        if created_notification_id:
+            await enqueue_notification_created(
+                db,
+                notification_id=created_notification_id,
+                user_id=recipient_id,
+                kind="new_message",
+            )
         conversation.updated_at = datetime.now(UTC)
     await db.commit()
     return message

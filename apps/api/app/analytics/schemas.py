@@ -21,3 +21,13 @@ class AdminMetrics(BaseModel):
     messages: int
     reviews: int
     ai_generations: int
+
+
+class QueueMetrics(BaseModel):
+    pending: int
+    processing: int
+    failed: int
+    completed: int
+    oldest_pending_seconds: int | None
+    worker_healthy: bool
+    heartbeat_age_seconds: int | None
