@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Transactional Outbox Queue and Metrics — verified and ready for review.
+Private Technical Metrics Export — verified and ready for review.
 
 ## Completed
 
@@ -41,6 +41,7 @@ Transactional Outbox Queue and Metrics — verified and ready for review.
 - Purpose-bound password recovery and active-session management are implemented.
 - Explainable, moderator-only coordinated complaint signals are implemented.
 - Durable notification outbox, retrying worker and administrator queue metrics are implemented.
+- Private low-cardinality OpenMetrics-compatible technical export is implemented.
 
 ## In progress
 
@@ -64,7 +65,7 @@ OTP adapter and must not be enabled publicly until an approved SMS provider exis
 
 ## Technical debt
 
-Structured metrics export and alert routing remain for production observability.
+Alert routing, dashboards and metrics retention remain deployment-specific.
 
 ## Decisions needed from owner
 
@@ -97,9 +98,22 @@ Structured metrics export and alert routing remain for production observability.
 
 ## Latest successful test run
 
-2026-08-03: API and worker Ruff passed; 72 API tests passed using freshly rebuilt
+2026-08-03: API and worker Ruff passed; 78 API tests passed using freshly rebuilt
 images; frontend lint, strict typecheck, 9 tests and production build passed;
 Docker Compose configuration validated; migration 0014 is at head.
+
+## Private metrics export verification
+
+- Export is disabled when `METRICS_TOKEN` is empty and weak non-empty tokens are
+  rejected during configuration validation.
+- Missing and incorrect Bearer tokens return the same hidden `404` response.
+- Secret comparisons are constant-time and tokens never appear in metric output.
+- HTTP labels contain registered route templates rather than concrete URLs.
+- Exported data is limited to HTTP aggregates, queue state and worker health.
+- Redis metric failure degrades the worker gauge without exposing an exception.
+- API Ruff and 78 tests passed using a freshly rebuilt image.
+- Frontend lint, strict typecheck, 9 tests and production build passed unchanged.
+- Docker Compose validated and Alembic remains at `0014 (head)`.
 
 ## Transactional queue verification
 

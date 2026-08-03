@@ -4,7 +4,7 @@ import time
 import uuid
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -26,6 +26,8 @@ from app.media.router import router as media_router
 from app.media.storage import S3Storage
 from app.complaints.router import router as complaints_router
 from app.verification.router import router as verification_router
+from app.analytics.service import queue_metrics
+from app.observability import http_metrics, metrics_request_is_authorized
 from app.security import (
     UNSAFE_METHODS,
     auth_rate_limit_exceeded,
@@ -121,6 +123,14 @@ async def request_context(request: Request, call_next):
         status=response.status_code,
         duration_ms=round((time.perf_counter() - started) * 1000, 2),
     )
+    route = request.scope.get("route")
+    route_template = getattr(route, "path", "unmatched")
+    http_metrics.observe(
+        request.method,
+        route_template,
+        response.status_code,
+        time.perf_counter() - started,
+    )
     return response
 
 
@@ -139,3 +149,24 @@ async def readiness() -> dict[str, str]:
     finally:
         await redis.aclose()
     return {"status": "ready"}
+
+
+@app.get("/internal/metrics", include_in_schema=False)
+async def metrics(request: Request):
+    if not metrics_request_is_authorized(request, settings.metrics_token):
+        return JSONResponse(status_code=404, content={"detail": {"code": "not_found"}})
+    heartbeat: int | None = None
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        value = await redis.get("lava:worker:heartbeat")
+        heartbeat = int(value) if value is not None else None
+    except (RedisError, ValueError):
+        heartbeat = None
+    finally:
+        await redis.aclose()
+    async with session_factory() as session:
+        queue = await queue_metrics(session, heartbeat)
+    return PlainTextResponse(
+        http_metrics.render(queue),
+        media_type="application/openmetrics-text; version=1.0.0; charset=utf-8",
+    )

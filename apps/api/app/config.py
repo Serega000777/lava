@@ -1,3 +1,4 @@
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,7 +25,18 @@ class Settings(BaseSettings):
     media_max_bytes: int = 10 * 1024 * 1024
     media_max_per_listing: int = 10
     media_max_pixels: int = 20_000_000
+    metrics_token: SecretStr | None = None
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @field_validator("metrics_token", mode="before")
+    @classmethod
+    def validate_metrics_token(cls, value: object) -> object:
+        raw = value.get_secret_value() if isinstance(value, SecretStr) else value
+        if raw == "":
+            return None
+        if isinstance(raw, str) and len(raw) < 32:
+            raise ValueError("metrics_token must contain at least 32 characters")
+        return value
 
     @property
     def cors_origins(self) -> list[str]:

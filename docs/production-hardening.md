@@ -8,6 +8,7 @@
 - Redis rate limiting on registration, password login and OTP endpoints.
 - Fail-closed authentication when the rate limiter is unavailable.
 - Request IDs, structured redacted access logs and baseline security headers.
+- Hidden, strong-token-protected, low-cardinality OpenMetrics export.
 - Web CSP, frame blocking and restricted browser capabilities.
 
 ## Deployment requirements
@@ -21,6 +22,8 @@
 - Send JSON logs to restricted storage with retention and redaction controls.
 - Alert on sustained `429`, `503`, authentication failure and moderation anomaly
   rates.
+- Store and rotate `METRICS_TOKEN` in the secrets manager; scrape every API
+  instance and the queue/worker gauges before enabling production alerts.
 
 ## Pre-launch follow-ups
 

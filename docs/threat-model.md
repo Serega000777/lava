@@ -31,4 +31,10 @@ counts and stale-lock recovery. Worker logs exclude payloads; Redis Stream keys
 hash user identifiers and stream entries omit message bodies and profile data.
 Queue metrics require the administrator analytics permission.
 
+Technical metric export is disabled without a minimum-32-character secret and
+returns `404` for unauthorized requests. HTTP metrics use registered route
+templates, never concrete URLs, which avoids leaking public UUIDs or creating
+attacker-controlled label cardinality. No request body, query, cookie or header is
+included in metrics.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.
