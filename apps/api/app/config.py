@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     complaint_rate_limit: int = 10
     complaint_target_rate_limit: int = 3
     complaint_rate_window_seconds: int = 86_400
+    message_rate_limit: int = 60
+    message_conversation_rate_limit: int = 20
+    message_rate_window_seconds: int = 60
     s3_endpoint: str = "http://localhost:9000"
     s3_access_key: str = "lava"
     s3_secret_key: str = "lava_local_secret"

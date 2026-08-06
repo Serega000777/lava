@@ -11,4 +11,13 @@ Authenticated endpoints:
 
 Conversations can start only for active listings and never with the listing owner as buyer. Message bodies contain 1–4000 characters after trimming. HTML is treated as plain text by the React UI.
 
-Current limitations: polling/realtime transport, abuse rate limits, block lists, attachments and delivery/read receipts are scheduled for hardening. Before public beta, mutations also require explicit CSRF tokens in addition to SameSite cookies.
+Message creation has atomic Redis limits per account and per account/conversation
+pair. The defaults allow 60 messages per account and 20 per conversation each
+minute. Repeating the same client message UUID reproduces its original allow/deny
+decision without consuming the window twice; identifier-bearing Redis keys are
+hashed. Limiter failure returns `503` only for
+message creation, while conversation and message reads remain available.
+
+Current limitations: block lists, attachments and delivery/read receipts are
+scheduled for hardening. Realtime notification events are published through the
+transactional outbox, while the UI still uses polling as its durable fallback.

@@ -1,6 +1,8 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import current_user, get_db
@@ -12,6 +14,8 @@ from app.messaging.schemas import (
     MessageResponse,
     NotificationResponse,
 )
+from app.messaging.abuse import message_rate_limited
+from app.config import settings
 from app.messaging.service import (
     create_conversation,
     list_conversations,
@@ -69,6 +73,23 @@ async def create_message(
     db: AsyncSession = Depends(get_db),
 ):
     conversation = await participant_conversation(db, conversation_id, user.id)
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        limited = await message_rate_limited(
+            redis, user.id, conversation.id, data.client_message_id
+        )
+    except RedisError as error:
+        raise HTTPException(
+            503, detail={"code": "security_dependency_unavailable"}
+        ) from error
+    finally:
+        await redis.aclose()
+    if limited:
+        raise HTTPException(
+            429,
+            detail={"code": "message_rate_limited"},
+            headers={"Retry-After": str(settings.message_rate_window_seconds)},
+        )
     return await send_message(
         db, conversation, user.id, data.client_message_id, data.body
     )

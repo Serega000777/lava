@@ -24,7 +24,8 @@ account data.
 
 Complaint creation uses an atomic Redis script with two fixed-window limits: per
 account and per account/listing pair. A retry with the same client request UUID
-does not consume the limit again. Redis keys contain hashes instead of public
+reproduces its original allow/deny decision and does not consume the limit again.
+Redis keys contain hashes instead of public
 identifiers. If Redis is unavailable, complaint creation fails closed while
 unrelated marketplace functions remain available.
 

@@ -34,7 +34,7 @@ async def test_new_complaint_within_limit_is_allowed() -> None:
 @pytest.mark.asyncio
 async def test_duplicate_request_does_not_report_limit() -> None:
     redis = AsyncMock()
-    redis.eval.return_value = 0
+    redis.eval.return_value = 1
 
     limited = await complaint_rate_limited(
         redis, uuid.uuid4(), uuid.uuid4(), uuid.uuid4()

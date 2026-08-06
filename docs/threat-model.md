@@ -37,4 +37,10 @@ templates, never concrete URLs, which avoids leaking public UUIDs or creating
 attacker-controlled label cardinality. No request body, query, cookie or header is
 included in metrics.
 
+Message spam is constrained by authenticated participation checks and atomic
+per-account/per-conversation Redis limits. Idempotent retries do not consume the
+limit twice, keys hash identifiers and message creation fails closed when the
+security dependency is unavailable. Block lists and recipient-level controls
+remain a public-beta hardening follow-up.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

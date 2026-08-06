@@ -75,6 +75,14 @@ function Inbox() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ body, client_message_id: crypto.randomUUID() }),
     });
+    if (response.status === 429) {
+      setStatus("Слишком много сообщений. Подождите минуту и попробуйте снова.");
+      return;
+    }
+    if (response.status === 503) {
+      setStatus("Отправка временно недоступна из-за защитной проверки. Попробуйте позже.");
+      return;
+    }
     if (!response.ok) {
       setStatus("Не удалось отправить сообщение.");
       return;

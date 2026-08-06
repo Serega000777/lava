@@ -6,9 +6,9 @@ from redis.asyncio import Redis
 from app.config import settings
 
 COMPLAINT_LIMIT_SCRIPT = """
-local is_new = redis.call('SET', KEYS[1], '1', 'EX', ARGV[3], 'NX')
-if not is_new then
-    return 0
+local prior_decision = redis.call('GET', KEYS[1])
+if prior_decision then
+    return tonumber(prior_decision)
 end
 local account_count = redis.call('INCR', KEYS[2])
 if account_count == 1 then
@@ -19,8 +19,10 @@ if target_count == 1 then
     redis.call('EXPIRE', KEYS[3], ARGV[3])
 end
 if account_count > tonumber(ARGV[1]) or target_count > tonumber(ARGV[2]) then
+    redis.call('SET', KEYS[1], '2', 'EX', ARGV[3])
     return 2
 end
+redis.call('SET', KEYS[1], '1', 'EX', ARGV[3])
 return 1
 """
 

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Private Technical Metrics Export — verified and ready for review.
+Message Spam Protection — code verified; API image rebuild pending local BuildKit recovery.
 
 ## Completed
 
@@ -42,6 +42,7 @@ Private Technical Metrics Export — verified and ready for review.
 - Explainable, moderator-only coordinated complaint signals are implemented.
 - Durable notification outbox, retrying worker and administrator queue metrics are implemented.
 - Private low-cardinality OpenMetrics-compatible technical export is implemented.
+- Idempotent account/conversation message rate limits are implemented.
 
 ## In progress
 
@@ -63,9 +64,14 @@ None.
 Production SMS and VK providers are disabled. Recovery currently uses the local
 OTP adapter and must not be enabled publicly until an approved SMS provider exists.
 
+On 2026-08-06 Docker BuildKit began hanging before build output. Current API files
+pass Ruff and 83 tests through a bind-mounted previously built image; a fresh image
+rebuild or CI confirmation remains required before this phase is review-ready.
+
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
+Messaging block lists and recipient controls remain for public-beta hardening.
 
 ## Decisions needed from owner
 
@@ -114,6 +120,18 @@ Docker Compose configuration validated; migration 0014 is at head.
 - API Ruff and 78 tests passed using a freshly rebuilt image.
 - Frontend lint, strict typecheck, 9 tests and production build passed unchanged.
 - Docker Compose validated and Alembic remains at `0014 (head)`.
+
+## Message spam protection verification
+
+- Atomic Redis Lua applies per-account and per account/conversation limits.
+- Request UUID keys preserve the original allow/deny result, preventing both
+  double counting and retry bypass after a denial.
+- Identifier-bearing limiter keys are SHA-256 hashes.
+- Redis outage fails message creation closed without affecting conversation reads.
+- `429` includes `Retry-After`; the web UI explains `429`/`503` and keeps draft text.
+- API Ruff and 83 tests passed against current bind-mounted source.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Fresh API image rebuild remains pending due the documented local BuildKit hang.
 
 ## Transactional queue verification
 
