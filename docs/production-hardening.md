@@ -9,6 +9,8 @@
 - Fail-closed authentication when the rate limiter is unavailable.
 - Request IDs, structured redacted access logs and baseline security headers.
 - Hidden, strong-token-protected, low-cardinality OpenMetrics export.
+- Docker build context excludes Git metadata, local dependencies, caches and all
+  `.env` variants so they cannot be copied into build transfers accidentally.
 - Web CSP, frame blocking and restricted browser capabilities.
 
 ## Deployment requirements
