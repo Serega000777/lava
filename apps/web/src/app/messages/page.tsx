@@ -29,6 +29,7 @@ function Inbox() {
   const [status, setStatus] = useState("Загружаем диалоги…");
   const [reputation, setReputation] = useState<{ average_rating: string | null; review_count: number } | null>(null);
   const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
+  const [reportedMessages, setReportedMessages] = useState<Set<string>>(new Set());
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedId);
   const selectedIsBlocked = selectedConversation
     ? blockedUsers.has(selectedConversation.counterpart_id)
@@ -125,6 +126,35 @@ function Inbox() {
     setStatus(isBlocked ? "Пользователь разблокирован." : "Пользователь заблокирован. История сохранена.");
   }
 
+  async function reportMessage(event: FormEvent<HTMLFormElement>, messageId: string) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const response = await apiFetch(`${apiUrl}/messages/${messageId}/reports`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_request_id: crypto.randomUUID(),
+        reason_code: form.get("reason_code"),
+        details: "",
+      }),
+    });
+    if (response.status === 429) {
+      setStatus("Лимит жалоб исчерпан. Попробуйте позже.");
+      return;
+    }
+    if (response.status === 503) {
+      setStatus("Защита жалоб временно недоступна. Попробуйте позже.");
+      return;
+    }
+    if (!response.ok) {
+      setStatus("Не удалось отправить жалобу на сообщение.");
+      return;
+    }
+    setReportedMessages((current) => new Set(current).add(messageId));
+    setStatus("Жалоба на сообщение отправлена модератору.");
+  }
+
   async function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -188,9 +218,24 @@ function Inbox() {
           })()}
           <div className="message-feed">
             {messages.map((message) => (
-              <p className={message.sender_id === me ? "message mine" : "message"} key={message.id}>
-                {message.body}
-              </p>
+              <div className={message.sender_id === me ? "message mine" : "message"} key={message.id}>
+                <p>{message.body}</p>
+                {message.sender_id !== me && (
+                  <form onSubmit={(event) => void reportMessage(event, message.id)}>
+                    <label className="sr-only" htmlFor={`report-reason-${message.id}`}>Причина жалобы</label>
+                    <select id={`report-reason-${message.id}`} name="reason_code" defaultValue="spam" disabled={reportedMessages.has(message.id)}>
+                      <option value="spam">Спам</option>
+                      <option value="fraud">Мошенничество</option>
+                      <option value="harassment">Оскорбления или преследование</option>
+                      <option value="prohibited_content">Запрещённый контент</option>
+                      <option value="other">Другое</option>
+                    </select>
+                    <button className="ghost" disabled={reportedMessages.has(message.id)}>
+                      {reportedMessages.has(message.id) ? "Жалоба отправлена" : "Пожаловаться"}
+                    </button>
+                  </form>
+                )}
+              </div>
             ))}
           </div>
           {selectedId && (

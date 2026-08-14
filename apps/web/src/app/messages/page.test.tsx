@@ -28,6 +28,9 @@ describe("MessagesPage", () => {
       if (input.endsWith("/users/seller-1/block") && init?.method === "PUT") {
         return { ok: true, status: 201 };
       }
+      if (input.endsWith("/messages/message-1/reports") && init?.method === "POST") {
+        return { ok: true, status: 201 };
+      }
       if (input.endsWith("/conversations")) {
         return {
           ok: true,
@@ -43,7 +46,14 @@ describe("MessagesPage", () => {
       if (input.endsWith("/messages") && init?.method === "POST") {
         return { ok: false, status: 429 };
       }
-      if (input.endsWith("/messages")) return { ok: true, json: async () => [] };
+      if (input.endsWith("/messages")) {
+        return { ok: true, json: async () => [{
+          id: "message-1",
+          sender_id: "seller-1",
+          body: "Оплатите по ссылке",
+          created_at: "2026-08-14T00:00:00Z",
+        }] };
+      }
       throw new Error(`unexpected request: ${input}`);
     }));
 
@@ -58,5 +68,9 @@ describe("MessagesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Заблокировать пользователя" }));
     expect(await screen.findByText(/История сохранена/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Разблокировать пользователя" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Пожаловаться" }));
+    expect(await screen.findByText("Жалоба на сообщение отправлена модератору.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Жалоба отправлена" })).toBeDisabled();
   });
 });

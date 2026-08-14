@@ -9,6 +9,16 @@ describe("ModerationPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string) => ({
       ok: true,
       json: async () => {
+        if (url.includes("/message-reports")) {
+          return [{
+            id: "message-report-1",
+            message_id: "message-1",
+            reported_user_id: "seller-1",
+            reason_code: "spam",
+            details: "",
+            message_body: "Оплатите по ссылке",
+          }];
+        }
         if (url.includes("/complaints")) {
           return [{
             id: "complaint-1",
@@ -45,6 +55,8 @@ describe("ModerationPage", () => {
     expect(screen.getByText("В объявлении указаны все обязательные характеристики товара."))
       .toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Жалобы" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Сообщения" })).toBeInTheDocument();
+    expect(screen.getByText("Оплатите по ссылке")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Апелляции" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Возможна координация");
   });

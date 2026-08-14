@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Messaging Block Lists — implementation and local verification complete.
+Message Reporting — implementation and local verification complete.
 
 ## Completed
 
@@ -44,6 +44,7 @@ Messaging Block Lists — implementation and local verification complete.
 - Private low-cardinality OpenMetrics-compatible technical export is implemented.
 - Idempotent account/conversation message rate limits are implemented.
 - Private bidirectional messaging block controls are implemented.
+- Participant-scoped, rate-limited message reporting and moderator review are implemented.
 
 ## In progress
 
@@ -71,7 +72,7 @@ the current API image rebuilds successfully and passes the complete verification
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
-Message reporting and mute controls remain for public-beta hardening.
+Mute controls remain for public-beta hardening.
 
 ## Decisions needed from owner
 
@@ -104,9 +105,22 @@ Message reporting and mute controls remain for public-beta hardening.
 
 ## Latest successful test run
 
-2026-08-14: a fresh API image built successfully; API Ruff and 87 tests passed;
+2026-08-14: a fresh API image built successfully; API Ruff and 92 tests passed;
 frontend lint, strict typecheck, 10 tests and production build passed;
-migration 0015 applied successfully and is at head.
+migration 0016 applied successfully and is at head.
+
+## Message reporting verification
+
+- Only a conversation participant can report an incoming message; foreign message
+  IDs are hidden with `404` and senders cannot report their own content.
+- Idempotent request UUIDs reject changed payloads, including conflict races.
+- Atomic hashed Redis limits fail closed without exposing account or message IDs.
+- The moderator-only bounded queue exposes referenced message text for review;
+  reports never trigger automatic account sanctions.
+- Inbox reporting and moderator decisions include explicit success/error states.
+- A fresh API image built successfully; Ruff and 92 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0016 (head)`.
 
 ## Messaging block lists verification
 

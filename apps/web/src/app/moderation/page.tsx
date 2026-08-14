@@ -27,6 +27,14 @@ type Appeal = {
   reason: string;
   status: string;
 };
+type MessageReport = {
+  id: string;
+  message_id: string;
+  reason_code: string;
+  details: string;
+  message_body: string;
+  reported_user_id: string;
+};
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -34,6 +42,7 @@ export default function ModerationPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
+  const [messageReports, setMessageReports] = useState<MessageReport[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -43,18 +52,20 @@ export default function ModerationPage() {
         fetch(`${apiUrl}/moderation/cases`, { credentials: "include", signal }),
         fetch(`${apiUrl}/moderation/complaints`, { credentials: "include", signal }),
         fetch(`${apiUrl}/moderation/appeals`, { credentials: "include", signal }),
+        fetch(`${apiUrl}/moderation/message-reports`, { credentials: "include", signal }),
       ]);
       const failed = responses.find((response) => !response.ok);
       if (failed) {
         setMessage(failed.status === 403 ? "Недостаточно прав" : "Войдите как модератор");
         return;
       }
-      const [caseItems, complaintItems, appealItems] = await Promise.all(
+      const [caseItems, complaintItems, appealItems, messageReportItems] = await Promise.all(
         responses.map((response) => response.json()),
       );
       setCases(caseItems as Case[]);
       setComplaints(complaintItems as Complaint[]);
       setAppeals(appealItems as Appeal[]);
+      setMessageReports(messageReportItems as MessageReport[]);
     } catch (error: unknown) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setMessage("Ошибка загрузки очереди");
@@ -128,6 +139,21 @@ export default function ModerationPage() {
     if (response.ok) await load();
   }
 
+  async function decideMessageReport(reportId: string, decision: "resolved" | "dismissed") {
+    const response = await apiFetch(`${apiUrl}/moderation/message-reports/${reportId}/decision`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decision,
+        resolution_code: decision === "resolved" ? "user_warned" : "no_violation",
+        comment: "",
+      }),
+    });
+    setMessage(response.ok ? "Жалоба на сообщение обработана" : "Не удалось обработать жалобу");
+    if (response.ok) await load();
+  }
+
   return (
     <main className="auth-shell">
       <section className="auth-card moderation-card">
@@ -178,6 +204,29 @@ export default function ModerationPage() {
                 </button>
                 <button className="ghost" onClick={() => void decideComplaint(item.id, "dismissed")}>
                   Отклонить жалобу
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <h2>Сообщения</h2>
+        {!loading && messageReports.length === 0 && <p>Жалоб на сообщения нет.</p>}
+        <ul className="moderation-list">
+          {messageReports.map((item) => (
+            <li key={item.id}>
+              <div>
+                <strong>{item.reason_code}</strong>
+                <small>Сообщение {item.message_id} · пользователь {item.reported_user_id}</small>
+                <p>{item.message_body}</p>
+                {item.details && <p>{item.details}</p>}
+              </div>
+              <div className="moderation-actions">
+                <button className="danger" onClick={() => void decideMessageReport(item.id, "resolved")}>
+                  Нарушение подтверждено
+                </button>
+                <button className="ghost" onClick={() => void decideMessageReport(item.id, "dismissed")}>
+                  Нарушения нет
                 </button>
               </div>
             </li>

@@ -18,7 +18,7 @@ decision without consuming the window twice; identifier-bearing Redis keys are
 hashed. Limiter failure returns `503` only for
 message creation, while conversation and message reads remain available.
 
-Current limitations: message reporting, mute controls, attachments and
+Current limitations: mute controls, attachments and
 delivery/read receipts are scheduled for hardening. Realtime notification events are published through the
 transactional outbox, while the UI still uses polling as its durable fallback.
 
@@ -31,3 +31,9 @@ User block controls are private and idempotent:
 A block in either direction prevents new conversations and messages with `409`,
 but leaves history readable. The inbox disables its composer for blocks created by
 the current user and keeps the conversation visible.
+
+Incoming messages can be reported with a bounded reason and optional details.
+Only conversation participants can create reports, senders cannot report their
+own messages, and Redis applies idempotent fail-closed abuse limits. Moderators
+review the referenced immutable message in a permission-gated queue; reports do
+not trigger automatic account sanctions.

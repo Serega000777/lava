@@ -48,4 +48,9 @@ other. Checks run before message rate limiting and again at the transactional
 service boundary. Blocking never deletes conversation history, preserving evidence
 for complaints and moderation. Block lists are private and exclude phone data.
 
+Message reports hide foreign messages with `404`, reject self-reporting, use
+hashed fail-closed rate-limit keys and expose message bodies only to moderators.
+A single report cannot automatically sanction an account; enforcement requires a
+separate explicit and audited workflow.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

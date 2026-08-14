@@ -278,6 +278,41 @@ class OutboxTask(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class MessageReport(Base):
+    __tablename__ = "message_reports"
+    __table_args__ = (
+        CheckConstraint("reporter_id <> reported_user_id"),
+        CheckConstraint("status IN ('open', 'resolved', 'dismissed')"),
+        CheckConstraint(
+            "reason_code IN ('spam', 'fraud', 'harassment', 'prohibited_content', 'other')"
+        ),
+        UniqueConstraint("reporter_id", "client_request_id"),
+        UniqueConstraint("reporter_id", "message_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+    reporter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reported_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    client_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    reason_code: Mapped[str] = mapped_column(String(32))
+    details: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    resolution_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    resolution_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Review(Base):
     __tablename__ = "reviews"
     __table_args__ = (
