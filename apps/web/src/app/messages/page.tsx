@@ -28,21 +28,29 @@ function Inbox() {
   const [me, setMe] = useState("");
   const [status, setStatus] = useState("Загружаем диалоги…");
   const [reputation, setReputation] = useState<{ average_rating: string | null; review_count: number } | null>(null);
+  const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
+  const selectedConversation = conversations.find((conversation) => conversation.id === selectedId);
+  const selectedIsBlocked = selectedConversation
+    ? blockedUsers.has(selectedConversation.counterpart_id)
+    : false;
 
   useEffect(() => {
     Promise.all([
       fetch(`${apiUrl}/conversations`, { credentials: "include" }),
       fetch(`${apiUrl}/me`, { credentials: "include" }),
-    ]).then(async ([conversationResponse, meResponse]) => {
+      fetch(`${apiUrl}/blocks`, { credentials: "include" }),
+    ]).then(async ([conversationResponse, meResponse, blocksResponse]) => {
       if (conversationResponse.status === 401) {
         setStatus("Войдите, чтобы увидеть сообщения.");
         return;
       }
-      if (!conversationResponse.ok || !meResponse.ok) throw new Error("inbox failed");
+      if (!conversationResponse.ok || !meResponse.ok || !blocksResponse.ok) throw new Error("inbox failed");
       const loaded = await conversationResponse.json() as Conversation[];
       const currentUser = await meResponse.json() as { id: string };
+      const blocks = await blocksResponse.json() as { user_id: string }[];
       setConversations(loaded);
       setMe(currentUser.id);
+      setBlockedUsers(new Set(blocks.map((item) => item.user_id)));
       setSelectedId((current) => current || loaded[0]?.id || "");
       setStatus(loaded.length ? "" : "Диалогов пока нет.");
     }).catch(() => setStatus("Не удалось загрузить диалоги."));
@@ -83,6 +91,10 @@ function Inbox() {
       setStatus("Отправка временно недоступна из-за защитной проверки. Попробуйте позже.");
       return;
     }
+    if (response.status === 409) {
+      setStatus("Сообщения между этими пользователями заблокированы.");
+      return;
+    }
     if (!response.ok) {
       setStatus("Не удалось отправить сообщение.");
       return;
@@ -90,6 +102,27 @@ function Inbox() {
     const message = await response.json() as Message;
     setMessages((current) => [...current, message]);
     event.currentTarget.reset();
+  }
+
+  async function toggleBlock() {
+    const selected = conversations.find((conversation) => conversation.id === selectedId);
+    if (!selected) return;
+    const isBlocked = blockedUsers.has(selected.counterpart_id);
+    const response = await apiFetch(`${apiUrl}/users/${selected.counterpart_id}/block`, {
+      method: isBlocked ? "DELETE" : "PUT",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      setStatus("Не удалось изменить блокировку пользователя.");
+      return;
+    }
+    setBlockedUsers((current) => {
+      const next = new Set(current);
+      if (isBlocked) next.delete(selected.counterpart_id);
+      else next.add(selected.counterpart_id);
+      return next;
+    });
+    setStatus(isBlocked ? "Пользователь разблокирован." : "Пользователь заблокирован. История сохранена.");
   }
 
   async function review(event: FormEvent<HTMLFormElement>) {
@@ -143,6 +176,16 @@ function Inbox() {
               Репутация собеседника: {reputation.average_rating ?? "нет оценок"} · отзывов {reputation.review_count}
             </p>
           )}
+          {selectedId && (() => {
+            const selected = selectedConversation;
+            if (!selected) return null;
+            const isBlocked = blockedUsers.has(selected.counterpart_id);
+            return (
+              <button className="ghost" type="button" onClick={() => void toggleBlock()}>
+                {isBlocked ? "Разблокировать пользователя" : "Заблокировать пользователя"}
+              </button>
+            );
+          })()}
           <div className="message-feed">
             {messages.map((message) => (
               <p className={message.sender_id === me ? "message mine" : "message"} key={message.id}>
@@ -163,8 +206,8 @@ function Inbox() {
               </form>
               <form className="message-form" onSubmit={send}>
                 <label className="sr-only" htmlFor="message-body">Сообщение</label>
-                <textarea id="message-body" name="body" maxLength={4000} required placeholder="Напишите сообщение…" />
-                <button>Отправить</button>
+                <textarea id="message-body" name="body" maxLength={4000} required disabled={selectedIsBlocked} placeholder="Напишите сообщение…" />
+                <button disabled={selectedIsBlocked}>Отправить</button>
               </form>
             </>
           )}

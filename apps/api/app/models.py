@@ -143,6 +143,21 @@ class Listing(Base):
     )
 
 
+class UserBlock(Base):
+    __tablename__ = "user_blocks"
+    __table_args__ = (
+        CheckConstraint("blocker_id <> blocked_id"),
+    )
+
+    blocker_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    blocked_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ListingMedia(Base):
     __tablename__ = "listing_media"
     __table_args__ = (

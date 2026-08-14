@@ -24,6 +24,10 @@ describe("MessagesPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
       if (input.endsWith("/auth/csrf")) return { ok: true, json: async () => ({ token: "csrf" }) };
       if (input.endsWith("/me")) return { ok: true, json: async () => ({ id: "buyer-1" }) };
+      if (input.endsWith("/blocks")) return { ok: true, json: async () => [] };
+      if (input.endsWith("/users/seller-1/block") && init?.method === "PUT") {
+        return { ok: true, status: 201 };
+      }
       if (input.endsWith("/conversations")) {
         return {
           ok: true,
@@ -50,5 +54,9 @@ describe("MessagesPage", () => {
 
     expect(await screen.findByText(/Слишком много сообщений/)).toBeInTheDocument();
     expect(textarea).toHaveValue("Здравствуйте");
+
+    fireEvent.click(screen.getByRole("button", { name: "Заблокировать пользователя" }));
+    expect(await screen.findByText(/История сохранена/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Разблокировать пользователя" })).toBeInTheDocument();
   });
 });

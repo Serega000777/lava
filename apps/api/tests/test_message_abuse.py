@@ -66,6 +66,9 @@ async def test_message_route_returns_retry_after_when_limited(monkeypatch) -> No
         "app.messaging.router.participant_conversation",
         AsyncMock(return_value=conversation),
     )
+    monkeypatch.setattr(
+        "app.messaging.router.ensure_messaging_allowed", AsyncMock(return_value=None)
+    )
 
     with pytest.raises(HTTPException) as error:
         await create_message(
@@ -98,6 +101,9 @@ async def test_message_route_fails_closed_without_redis(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.messaging.router.participant_conversation",
         AsyncMock(return_value=conversation),
+    )
+    monkeypatch.setattr(
+        "app.messaging.router.ensure_messaging_allowed", AsyncMock(return_value=None)
     )
 
     with pytest.raises(HTTPException) as error:

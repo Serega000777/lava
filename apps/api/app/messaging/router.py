@@ -16,6 +16,7 @@ from app.messaging.schemas import (
 )
 from app.messaging.abuse import message_rate_limited
 from app.config import settings
+from app.blocking.service import ensure_messaging_allowed
 from app.messaging.service import (
     create_conversation,
     list_conversations,
@@ -73,6 +74,12 @@ async def create_message(
     db: AsyncSession = Depends(get_db),
 ):
     conversation = await participant_conversation(db, conversation_id, user.id)
+    recipient_id = (
+        conversation.seller_id
+        if user.id == conversation.buyer_id
+        else conversation.buyer_id
+    )
+    await ensure_messaging_allowed(db, user.id, recipient_id)
     redis = Redis.from_url(settings.redis_url)
     try:
         limited = await message_rate_limited(

@@ -18,6 +18,16 @@ decision without consuming the window twice; identifier-bearing Redis keys are
 hashed. Limiter failure returns `503` only for
 message creation, while conversation and message reads remain available.
 
-Current limitations: block lists, attachments and delivery/read receipts are
-scheduled for hardening. Realtime notification events are published through the
+Current limitations: message reporting, mute controls, attachments and
+delivery/read receipts are scheduled for hardening. Realtime notification events are published through the
 transactional outbox, while the UI still uses polling as its durable fallback.
+
+User block controls are private and idempotent:
+
+- `PUT /users/{id}/block` blocks an active user;
+- `DELETE /users/{id}/block` removes the caller's block;
+- `GET /blocks` returns a bounded private block list.
+
+A block in either direction prevents new conversations and messages with `409`,
+but leaves history readable. The inbox disables its composer for blocks created by
+the current user and keeps the conversation visible.

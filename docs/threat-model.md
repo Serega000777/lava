@@ -43,4 +43,9 @@ limit twice, keys hash identifiers and message creation fails closed when the
 security dependency is unavailable. Block lists and recipient-level controls
 remain a public-beta hardening follow-up.
 
+User-managed block edges prevent contact when either participant has blocked the
+other. Checks run before message rate limiting and again at the transactional
+service boundary. Blocking never deletes conversation history, preserving evidence
+for complaints and moderation. Block lists are private and exclude phone data.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

@@ -69,7 +69,7 @@ async def test_idempotency_key_rejects_changed_message_payload() -> None:
         body="Первый текст",
     )
     db = AsyncMock()
-    db.scalar.side_effect = [None, existing]
+    db.scalar.side_effect = [False, None, existing]
 
     with pytest.raises(HTTPException) as error:
         await send_message(db, conversation, sender_id, client_id, "Другой текст")

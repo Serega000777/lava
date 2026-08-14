@@ -26,6 +26,7 @@ from app.media.router import router as media_router
 from app.media.storage import S3Storage
 from app.complaints.router import router as complaints_router
 from app.verification.router import router as verification_router
+from app.blocking.router import router as blocking_router
 from app.analytics.service import queue_metrics
 from app.observability import http_metrics, metrics_request_is_authorized
 from app.security import (
@@ -71,6 +72,7 @@ app.include_router(analytics_router)
 app.include_router(media_router)
 app.include_router(complaints_router)
 app.include_router(verification_router)
+app.include_router(blocking_router)
 
 
 @app.middleware("http")

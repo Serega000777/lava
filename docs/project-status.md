@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Message Spam Protection — code verified; API image rebuild pending local BuildKit recovery.
+Messaging Block Lists — implementation and local verification complete.
 
 ## Completed
 
@@ -43,6 +43,7 @@ Message Spam Protection — code verified; API image rebuild pending local Build
 - Durable notification outbox, retrying worker and administrator queue metrics are implemented.
 - Private low-cardinality OpenMetrics-compatible technical export is implemented.
 - Idempotent account/conversation message rate limits are implemented.
+- Private bidirectional messaging block controls are implemented.
 
 ## In progress
 
@@ -64,14 +65,13 @@ None.
 Production SMS and VK providers are disabled. Recovery currently uses the local
 OTP adapter and must not be enabled publicly until an approved SMS provider exists.
 
-On 2026-08-06 Docker BuildKit began hanging before build output. Current API files
-pass Ruff and 83 tests through a bind-mounted previously built image; a fresh image
-rebuild or CI confirmation remains required before this phase is review-ready.
+The earlier local Docker BuildKit hang was resolved by reducing the build context;
+the current API image rebuilds successfully and passes the complete verification.
 
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
-Messaging block lists and recipient controls remain for public-beta hardening.
+Message reporting and mute controls remain for public-beta hardening.
 
 ## Decisions needed from owner
 
@@ -104,9 +104,22 @@ Messaging block lists and recipient controls remain for public-beta hardening.
 
 ## Latest successful test run
 
-2026-08-03: API and worker Ruff passed; 78 API tests passed using freshly rebuilt
-images; frontend lint, strict typecheck, 9 tests and production build passed;
-Docker Compose configuration validated; migration 0014 is at head.
+2026-08-14: a fresh API image built successfully; API Ruff and 87 tests passed;
+frontend lint, strict typecheck, 10 tests and production build passed;
+migration 0015 applied successfully and is at head.
+
+## Messaging block lists verification
+
+- An authenticated user can idempotently block or unblock another active user.
+- Self-blocking and messaging in either blocked direction return safe `409` errors.
+- Existing conversation history remains readable while new conversations and
+  messages are rejected server-side, including a second check before persistence.
+- The private bounded block list exposes only user ID, display name and timestamp.
+- The inbox loads block state, supports block/unblock and disables sending for the
+  current user's blocks while preserving history.
+- A fresh API image built successfully; API Ruff and 87 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0015 (head)`.
 
 ## Private metrics export verification
 

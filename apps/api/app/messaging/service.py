@@ -9,6 +9,7 @@ from sqlalchemy.orm import aliased
 
 from app.models import Conversation, Listing, Message, Notification, User
 from app.queueing.service import enqueue_notification_created
+from app.blocking.service import ensure_messaging_allowed
 
 
 async def participant_conversation(
@@ -35,6 +36,7 @@ async def create_conversation(
         raise HTTPException(404, detail={"code": "listing_not_found"})
     if listing.owner_id == user_id:
         raise HTTPException(409, detail={"code": "cannot_message_self"})
+    await ensure_messaging_allowed(db, user_id, listing.owner_id)
 
     conversation_id = uuid.uuid4()
     created_id = await db.scalar(
@@ -91,6 +93,10 @@ async def send_message(
     client_message_id: uuid.UUID,
     body: str,
 ) -> Message:
+    recipient_id = (
+        conversation.seller_id if sender_id == conversation.buyer_id else conversation.buyer_id
+    )
+    await ensure_messaging_allowed(db, sender_id, recipient_id)
     message_id = uuid.uuid4()
     created_id = await db.scalar(
         insert(Message)
@@ -121,9 +127,6 @@ async def send_message(
     if not created_id and message.body != body:
         raise HTTPException(409, detail={"code": "client_message_payload_changed"})
     if created_id:
-        recipient_id = (
-            conversation.seller_id if sender_id == conversation.buyer_id else conversation.buyer_id
-        )
         notification_id = uuid.uuid4()
         created_notification_id = await db.scalar(
             insert(Notification)
