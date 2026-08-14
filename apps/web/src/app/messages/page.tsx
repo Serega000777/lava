@@ -17,6 +17,7 @@ type Message = {
   sender_id: string;
   body: string;
   created_at: string;
+  read_at: string | null;
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -64,7 +65,13 @@ function Inbox() {
     fetch(`${apiUrl}/conversations/${selectedId}/messages`, { credentials: "include" })
       .then(async (response) => {
         if (!response.ok) throw new Error("messages failed");
-        setMessages(await response.json() as Message[]);
+        const loadedMessages = await response.json() as Message[];
+        setMessages(loadedMessages);
+        const receipt = await apiFetch(`${apiUrl}/conversations/${selectedId}/read`, {
+          method: "PATCH",
+          credentials: "include",
+        });
+        if (!receipt.ok) setStatus("Сообщения загружены, но отметка о прочтении не сохранена.");
       })
       .catch(() => setStatus("Не удалось загрузить сообщения."));
     if (selected) {
@@ -244,6 +251,7 @@ function Inbox() {
             {messages.map((message) => (
               <div className={message.sender_id === me ? "message mine" : "message"} key={message.id}>
                 <p>{message.body}</p>
+                {message.sender_id === me && message.read_at && <small>Прочитано</small>}
                 {message.sender_id !== me && (
                   <form onSubmit={(event) => void reportMessage(event, message.id)}>
                     <label className="sr-only" htmlFor={`report-reason-${message.id}`}>Причина жалобы</label>

@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -9,6 +9,7 @@ from app.messaging.schemas import MessageCreate
 from app.messaging.service import (
     create_conversation,
     mute_conversation,
+    mark_conversation_read,
     participant_conversation,
     send_message,
 )
@@ -124,4 +125,51 @@ async def test_muted_recipient_gets_message_without_notification(monkeypatch) ->
     assert db.scalar.await_count == 4
     enqueue.assert_not_awaited()
     assert conversation.updated_at is not None
+    db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_read_receipt_is_idempotent_when_nothing_is_unread() -> None:
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        listing_id=uuid.uuid4(),
+        buyer_id=uuid.uuid4(),
+        seller_id=uuid.uuid4(),
+    )
+    scalars = MagicMock()
+    scalars.all.return_value = []
+    db = AsyncMock()
+    db.scalars.return_value = scalars
+
+    result = await mark_conversation_read(db, conversation, conversation.buyer_id)
+
+    assert result == {"read_count": 0, "read_at": None}
+    db.execute.assert_not_awaited()
+    db.commit.assert_not_awaited()
+    db.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_read_receipt_updates_selected_incoming_messages() -> None:
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        listing_id=uuid.uuid4(),
+        buyer_id=uuid.uuid4(),
+        seller_id=uuid.uuid4(),
+    )
+    unread_ids = [uuid.uuid4(), uuid.uuid4()]
+    scalars = MagicMock()
+    scalars.all.return_value = unread_ids
+    db = AsyncMock()
+    db.scalars.return_value = scalars
+
+    result = await mark_conversation_read(db, conversation, conversation.buyer_id)
+
+    assert result["read_count"] == 2
+    assert result["read_at"].tzinfo is not None
+    statement = db.scalars.await_args.args[0]
+    compiled = statement.compile()
+    assert conversation.id in compiled.params.values()
+    assert conversation.buyer_id in compiled.params.values()
+    db.execute.assert_not_awaited()
     db.commit.assert_awaited_once()

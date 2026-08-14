@@ -18,8 +18,8 @@ decision without consuming the window twice; identifier-bearing Redis keys are
 hashed. Limiter failure returns `503` only for
 message creation, while conversation and message reads remain available.
 
-Current limitations: attachments and
-delivery/read receipts are scheduled for hardening. Realtime notification events are published through the
+Current limitations: attachments and delivery receipts are scheduled for
+hardening. Realtime notification events are published through the
 transactional outbox, while the UI still uses polling as its durable fallback.
 
 User block controls are private and idempotent:
@@ -45,3 +45,8 @@ Conversation notification mutes are private and idempotent:
 
 Both endpoints verify participation. Muting never blocks message persistence,
 history reads or inbox ordering, and it is not visible to the other participant.
+
+`PATCH /conversations/{id}/read` atomically marks only unread messages sent by the
+other participant. The persisted `read_at` value is included in message DTOs, so
+senders see a truthful receipt after refresh. The endpoint is idempotent and does
+not implement presence or last-seen tracking.

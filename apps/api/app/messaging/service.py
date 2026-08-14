@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import case, delete, exists, or_, select
+from sqlalchemy import case, delete, exists, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -240,6 +240,33 @@ async def list_messages(
         .limit(limit)
         .offset(offset)
     )).all())
+
+
+async def mark_conversation_read(
+    db: AsyncSession,
+    conversation: Conversation,
+    user_id: uuid.UUID,
+) -> dict[str, object]:
+    read_at = datetime.now(UTC)
+    unread_ids = list(
+        (
+            await db.scalars(
+                update(Message)
+                .where(
+                    Message.conversation_id == conversation.id,
+                    Message.sender_id != user_id,
+                    Message.read_at.is_(None),
+                )
+                .values(read_at=read_at)
+                .returning(Message.id)
+            )
+        ).all()
+    )
+    if not unread_ids:
+        await db.rollback()
+        return {"read_count": 0, "read_at": None}
+    await db.commit()
+    return {"read_count": len(unread_ids), "read_at": read_at}
 
 
 async def list_notifications(

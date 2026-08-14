@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Conversation Mutes — implementation and local verification complete.
+Message Read Receipts — implementation and local verification complete.
 
 ## Completed
 
@@ -46,6 +46,7 @@ Conversation Mutes — implementation and local verification complete.
 - Private bidirectional messaging block controls are implemented.
 - Participant-scoped, rate-limited message reporting and moderator review are implemented.
 - Private participant-owned conversation notification mutes are implemented.
+- Atomic recipient-owned message read receipts are implemented without presence tracking.
 
 ## In progress
 
@@ -73,7 +74,7 @@ the current API image rebuilds successfully and passes the complete verification
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
-Message attachments and delivery/read receipts remain for public-beta hardening.
+Message attachments and delivery receipts remain for public-beta hardening.
 
 ## Decisions needed from owner
 
@@ -106,9 +107,22 @@ Message attachments and delivery/read receipts remain for public-beta hardening.
 
 ## Latest successful test run
 
-2026-08-14: a fresh API image built successfully; API Ruff and 94 tests passed;
+2026-08-14: a fresh API image built successfully; API Ruff and 96 tests passed;
 frontend lint, strict typecheck, 10 tests and production build passed;
-migration 0017 applied successfully and is at head.
+migration 0018 applied successfully and is at head.
+
+## Message read receipt verification
+
+- Only conversation participants can mark messages read; the atomic update targets
+  unread messages sent by the other participant.
+- `UPDATE ... RETURNING` makes repeated and concurrent receipt requests idempotent.
+- Persisted timezone-aware `read_at` values are exposed on message DTOs without
+  presence, last-seen or device metadata.
+- The inbox marks loaded incoming messages read and displays truthful receipts on
+  the current user's sent messages after refresh.
+- A fresh API image built successfully; Ruff and 96 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0018 (head)`.
 
 ## Conversation mute verification
 

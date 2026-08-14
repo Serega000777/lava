@@ -31,6 +31,9 @@ describe("MessagesPage", () => {
       if (input.endsWith("/conversations/conversation-1/mute") && init?.method === "PUT") {
         return { ok: true, status: 204 };
       }
+      if (input.endsWith("/conversations/conversation-1/read") && init?.method === "PATCH") {
+        return { ok: true, status: 200, json: async () => ({ read_count: 1, read_at: "2026-08-14T00:00:01Z" }) };
+      }
       if (input.endsWith("/messages/message-1/reports") && init?.method === "POST") {
         return { ok: true, status: 201 };
       }
@@ -51,18 +54,29 @@ describe("MessagesPage", () => {
         return { ok: false, status: 429 };
       }
       if (input.endsWith("/messages")) {
-        return { ok: true, json: async () => [{
-          id: "message-1",
-          sender_id: "seller-1",
-          body: "Оплатите по ссылке",
-          created_at: "2026-08-14T00:00:00Z",
-        }] };
+        return { ok: true, json: async () => [
+          {
+            id: "message-1",
+            sender_id: "seller-1",
+            body: "Оплатите по ссылке",
+            created_at: "2026-08-14T00:00:00Z",
+            read_at: null,
+          },
+          {
+            id: "message-2",
+            sender_id: "buyer-1",
+            body: "Уже посмотрел",
+            created_at: "2026-08-14T00:00:01Z",
+            read_at: "2026-08-14T00:00:02Z",
+          },
+        ] };
       }
       throw new Error(`unexpected request: ${input}`);
     }));
 
     render(<MessagesPage />);
     const textarea = await screen.findByPlaceholderText("Напишите сообщение…");
+    expect(await screen.findByText("Прочитано")).toBeInTheDocument();
     fireEvent.change(textarea, { target: { value: "Здравствуйте" } });
     fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
 

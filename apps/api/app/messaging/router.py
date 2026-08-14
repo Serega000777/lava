@@ -13,6 +13,7 @@ from app.messaging.schemas import (
     MessageCreate,
     MessageResponse,
     NotificationResponse,
+    ReadReceiptResponse,
 )
 from app.messaging.abuse import message_rate_limited
 from app.config import settings
@@ -23,6 +24,7 @@ from app.messaging.service import (
     list_messages,
     list_notifications,
     mark_notification_read,
+    mark_conversation_read,
     mute_conversation,
     participant_conversation,
     send_message,
@@ -62,6 +64,18 @@ async def messages(
 ):
     conversation = await participant_conversation(db, conversation_id, user.id)
     return await list_messages(db, conversation.id, limit, offset)
+
+
+@router.patch(
+    "/conversations/{conversation_id}/read", response_model=ReadReceiptResponse
+)
+async def read_conversation(
+    conversation_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    conversation = await participant_conversation(db, conversation_id, user.id)
+    return await mark_conversation_read(db, conversation, user.id)
 
 
 @router.put("/conversations/{conversation_id}/mute", status_code=204)

@@ -57,4 +57,8 @@ Conversation mutes are participant-owned and private. They suppress only future
 notification/outbox creation; message persistence, evidence and conversation
 ordering remain intact. Foreign conversation IDs return `404`.
 
+Read receipts require conversation participation and atomically update only
+messages sent by the other participant. Lava does not expose online presence,
+last-seen time or reader device data.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

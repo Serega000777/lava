@@ -45,7 +45,13 @@ class MessageResponse(BaseModel):
     client_message_id: uuid.UUID
     body: str
     created_at: datetime
+    read_at: datetime | None
     model_config = {"from_attributes": True}
+
+
+class ReadReceiptResponse(BaseModel):
+    read_count: int
+    read_at: datetime | None
 
 
 class NotificationResponse(BaseModel):
