@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Message Reporting — implementation and local verification complete.
+Conversation Mutes — implementation and local verification complete.
 
 ## Completed
 
@@ -45,6 +45,7 @@ Message Reporting — implementation and local verification complete.
 - Idempotent account/conversation message rate limits are implemented.
 - Private bidirectional messaging block controls are implemented.
 - Participant-scoped, rate-limited message reporting and moderator review are implemented.
+- Private participant-owned conversation notification mutes are implemented.
 
 ## In progress
 
@@ -72,7 +73,7 @@ the current API image rebuilds successfully and passes the complete verification
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
-Mute controls remain for public-beta hardening.
+Message attachments and delivery/read receipts remain for public-beta hardening.
 
 ## Decisions needed from owner
 
@@ -105,9 +106,22 @@ Mute controls remain for public-beta hardening.
 
 ## Latest successful test run
 
-2026-08-14: a fresh API image built successfully; API Ruff and 92 tests passed;
+2026-08-14: a fresh API image built successfully; API Ruff and 94 tests passed;
 frontend lint, strict typecheck, 10 tests and production build passed;
-migration 0016 applied successfully and is at head.
+migration 0017 applied successfully and is at head.
+
+## Conversation mute verification
+
+- Only a participant can idempotently mute or unmute a conversation; foreign IDs
+  are hidden with `404`.
+- Muted recipients still receive durable messages and conversation ordering still
+  advances, while notification and outbox rows are intentionally omitted.
+- Mute state is private to the current participant and returned with their bounded
+  conversation summaries.
+- The inbox supports mute/unmute with explicit success and failure states.
+- A fresh API image built successfully; Ruff and 94 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0017 (head)`.
 
 ## Message reporting verification
 

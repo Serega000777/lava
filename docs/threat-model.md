@@ -53,4 +53,8 @@ hashed fail-closed rate-limit keys and expose message bodies only to moderators.
 A single report cannot automatically sanction an account; enforcement requires a
 separate explicit and audited workflow.
 
+Conversation mutes are participant-owned and private. They suppress only future
+notification/outbox creation; message persistence, evidence and conversation
+ordering remain intact. Foreign conversation IDs return `404`.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

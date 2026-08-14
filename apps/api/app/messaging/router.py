@@ -23,8 +23,10 @@ from app.messaging.service import (
     list_messages,
     list_notifications,
     mark_notification_read,
+    mute_conversation,
     participant_conversation,
     send_message,
+    unmute_conversation,
 )
 from app.models import User
 
@@ -60,6 +62,24 @@ async def messages(
 ):
     conversation = await participant_conversation(db, conversation_id, user.id)
     return await list_messages(db, conversation.id, limit, offset)
+
+
+@router.put("/conversations/{conversation_id}/mute", status_code=204)
+async def mute(
+    conversation_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await mute_conversation(db, conversation_id, user.id)
+
+
+@router.delete("/conversations/{conversation_id}/mute", status_code=204)
+async def unmute(
+    conversation_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    await unmute_conversation(db, conversation_id, user.id)
 
 
 @router.post(

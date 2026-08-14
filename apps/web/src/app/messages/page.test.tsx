@@ -28,6 +28,9 @@ describe("MessagesPage", () => {
       if (input.endsWith("/users/seller-1/block") && init?.method === "PUT") {
         return { ok: true, status: 201 };
       }
+      if (input.endsWith("/conversations/conversation-1/mute") && init?.method === "PUT") {
+        return { ok: true, status: 204 };
+      }
       if (input.endsWith("/messages/message-1/reports") && init?.method === "POST") {
         return { ok: true, status: 201 };
       }
@@ -39,6 +42,7 @@ describe("MessagesPage", () => {
             listing_title: "Насос",
             counterpart_id: "seller-1",
             counterpart_name: "Продавец",
+            is_muted: false,
           }],
         };
       }
@@ -68,6 +72,10 @@ describe("MessagesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Заблокировать пользователя" }));
     expect(await screen.findByText(/История сохранена/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Разблокировать пользователя" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Отключить уведомления" }));
+    expect(await screen.findByText("Уведомления отключены.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Включить уведомления" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Пожаловаться" }));
     expect(await screen.findByText("Жалоба на сообщение отправлена модератору.")).toBeInTheDocument();

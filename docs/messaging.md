@@ -18,7 +18,7 @@ decision without consuming the window twice; identifier-bearing Redis keys are
 hashed. Limiter failure returns `503` only for
 message creation, while conversation and message reads remain available.
 
-Current limitations: mute controls, attachments and
+Current limitations: attachments and
 delivery/read receipts are scheduled for hardening. Realtime notification events are published through the
 transactional outbox, while the UI still uses polling as its durable fallback.
 
@@ -37,3 +37,11 @@ Only conversation participants can create reports, senders cannot report their
 own messages, and Redis applies idempotent fail-closed abuse limits. Moderators
 review the referenced immutable message in a permission-gated queue; reports do
 not trigger automatic account sanctions.
+
+Conversation notification mutes are private and idempotent:
+
+- `PUT /conversations/{id}/mute` disables future notification/outbox creation;
+- `DELETE /conversations/{id}/mute` restores notifications for future messages.
+
+Both endpoints verify participation. Muting never blocks message persistence,
+history reads or inbox ordering, and it is not visible to the other participant.

@@ -10,6 +10,7 @@ type Conversation = {
   listing_title: string;
   counterpart_id: string;
   counterpart_name: string;
+  is_muted: boolean;
 };
 type Message = {
   id: string;
@@ -126,6 +127,24 @@ function Inbox() {
     setStatus(isBlocked ? "Пользователь разблокирован." : "Пользователь заблокирован. История сохранена.");
   }
 
+  async function toggleMute() {
+    if (!selectedConversation) return;
+    const response = await apiFetch(`${apiUrl}/conversations/${selectedConversation.id}/mute`, {
+      method: selectedConversation.is_muted ? "DELETE" : "PUT",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      setStatus("Не удалось изменить уведомления диалога.");
+      return;
+    }
+    setConversations((current) => current.map((conversation) => (
+      conversation.id === selectedConversation.id
+        ? { ...conversation, is_muted: !conversation.is_muted }
+        : conversation
+    )));
+    setStatus(selectedConversation.is_muted ? "Уведомления включены." : "Уведомления отключены.");
+  }
+
   async function reportMessage(event: FormEvent<HTMLFormElement>, messageId: string) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -216,6 +235,11 @@ function Inbox() {
               </button>
             );
           })()}
+          {selectedConversation && (
+            <button className="ghost" type="button" onClick={() => void toggleMute()}>
+              {selectedConversation.is_muted ? "Включить уведомления" : "Отключить уведомления"}
+            </button>
+          )}
           <div className="message-feed">
             {messages.map((message) => (
               <div className={message.sender_id === me ? "message mine" : "message"} key={message.id}>

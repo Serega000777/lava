@@ -2,12 +2,12 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import case, or_, select
+from sqlalchemy import case, delete, exists, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.models import Conversation, Listing, Message, Notification, User
+from app.models import Conversation, ConversationMute, Listing, Message, Notification, User
 from app.queueing.service import enqueue_notification_created
 from app.blocking.service import ensure_messaging_allowed
 
@@ -126,7 +126,19 @@ async def send_message(
         raise HTTPException(409, detail={"code": "client_message_id_reused"})
     if not created_id and message.body != body:
         raise HTTPException(409, detail={"code": "client_message_payload_changed"})
+    recipient_muted = False
     if created_id:
+        recipient_muted = bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        ConversationMute.user_id == recipient_id,
+                        ConversationMute.conversation_id == conversation.id,
+                    )
+                )
+            )
+        )
+    if created_id and not recipient_muted:
         notification_id = uuid.uuid4()
         created_notification_id = await db.scalar(
             insert(Notification)
@@ -147,6 +159,7 @@ async def send_message(
                 user_id=recipient_id,
                 kind="new_message",
             )
+    if created_id:
         conversation.updated_at = datetime.now(UTC)
     await db.commit()
     return message
@@ -174,6 +187,12 @@ async def list_conversations(
                 (Conversation.buyer_id == user_id, seller.display_name),
                 else_=buyer.display_name,
             ).label("counterpart_name"),
+            exists()
+            .where(
+                ConversationMute.user_id == user_id,
+                ConversationMute.conversation_id == Conversation.id,
+            )
+            .label("is_muted"),
         )
         .join(Listing, Listing.id == Conversation.listing_id)
         .join(buyer, buyer.id == Conversation.buyer_id)
@@ -184,6 +203,31 @@ async def list_conversations(
         .offset(offset)
     )
     return [dict(row) for row in result.mappings().all()]
+
+
+async def mute_conversation(
+    db: AsyncSession, conversation_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    await participant_conversation(db, conversation_id, user_id)
+    await db.execute(
+        insert(ConversationMute)
+        .values(user_id=user_id, conversation_id=conversation_id)
+        .on_conflict_do_nothing(index_elements=["user_id", "conversation_id"])
+    )
+    await db.commit()
+
+
+async def unmute_conversation(
+    db: AsyncSession, conversation_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    await participant_conversation(db, conversation_id, user_id)
+    await db.execute(
+        delete(ConversationMute).where(
+            ConversationMute.user_id == user_id,
+            ConversationMute.conversation_id == conversation_id,
+        )
+    )
+    await db.commit()
 
 
 async def list_messages(
