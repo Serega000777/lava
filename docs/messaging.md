@@ -18,8 +18,8 @@ decision without consuming the window twice; identifier-bearing Redis keys are
 hashed. Limiter failure returns `503` only for
 message creation, while conversation and message reads remain available.
 
-Current limitations: delivery receipts and non-image attachments are scheduled
-for hardening. Realtime notification events are published through the
+Current limitations: non-image attachments are scheduled for hardening. Realtime
+notification events are published through the
 transactional outbox, while the UI still uses polling as its durable fallback.
 
 User block controls are private and idempotent:
@@ -56,3 +56,10 @@ inputs are limited to 5 MiB, decoded by signature, stripped of metadata and
 re-encoded as WebP; each message accepts at most three. Upload is sender-only,
 blocked conversations reject new media, and the attachment set is frozen when a
 message is reported. Moderator evidence downloads require `moderation:read`.
+
+`PATCH /conversations/{id}/delivered` is a recipient client acknowledgment after
+successful history loading. It atomically marks only messages sent by the other
+participant. Reading also fills a missing delivery timestamp, so `read_at` always
+implies delivery without overwriting an earlier acknowledgment. The UI labels
+persisted states as sent, delivered or read; no status is inferred from Redis or
+notification dispatch.

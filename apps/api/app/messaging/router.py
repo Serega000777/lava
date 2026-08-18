@@ -10,6 +10,7 @@ from app.messaging.schemas import (
     ConversationCreate,
     ConversationResponse,
     ConversationSummary,
+    DeliveryReceiptResponse,
     MessageCreate,
     MessageResponse,
     NotificationResponse,
@@ -25,6 +26,7 @@ from app.messaging.service import (
     list_notifications,
     mark_notification_read,
     mark_conversation_read,
+    mark_conversation_delivered,
     mute_conversation,
     participant_conversation,
     send_message,
@@ -76,6 +78,19 @@ async def read_conversation(
 ) -> dict[str, object]:
     conversation = await participant_conversation(db, conversation_id, user.id)
     return await mark_conversation_read(db, conversation, user.id)
+
+
+@router.patch(
+    "/conversations/{conversation_id}/delivered",
+    response_model=DeliveryReceiptResponse,
+)
+async def deliver_conversation(
+    conversation_id: uuid.UUID,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    conversation = await participant_conversation(db, conversation_id, user.id)
+    return await mark_conversation_delivered(db, conversation, user.id)
 
 
 @router.put("/conversations/{conversation_id}/mute", status_code=204)

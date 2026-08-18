@@ -66,4 +66,8 @@ and re-encoded before private storage. Uploads require message ownership and an
 unblocked conversation; reads require participation or moderator permission.
 Message locks serialize uploads with reports so reported evidence cannot change.
 
+Delivery receipts require participant authorization and an explicit recipient
+client acknowledgment. They reveal no presence, last-seen, typing or device data;
+read implies delivery and neither timestamp is derived from queue dispatch.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

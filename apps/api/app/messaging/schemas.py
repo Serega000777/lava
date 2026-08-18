@@ -47,6 +47,7 @@ class MessageResponse(BaseModel):
     client_message_id: uuid.UUID
     body: str
     created_at: datetime
+    delivered_at: datetime | None
     read_at: datetime | None
     media: list[MessageMediaResponse] = Field(default_factory=list)
     model_config = {"from_attributes": True}
@@ -55,6 +56,11 @@ class MessageResponse(BaseModel):
 class ReadReceiptResponse(BaseModel):
     read_count: int
     read_at: datetime | None
+
+
+class DeliveryReceiptResponse(BaseModel):
+    delivered_count: int
+    delivered_at: datetime | None
 
 
 class NotificationResponse(BaseModel):

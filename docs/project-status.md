@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Private Message Images — implementation and local verification complete.
+Recipient Delivery Receipts — implementation and local verification complete.
 
 ## Completed
 
@@ -48,6 +48,7 @@ Private Message Images — implementation and local verification complete.
 - Private participant-owned conversation notification mutes are implemented.
 - Atomic recipient-owned message read receipts are implemented without presence tracking.
 - Private normalized participant-authorized message images are implemented.
+- Recipient-confirmed atomic delivery receipts are implemented without presence tracking.
 
 ## In progress
 
@@ -75,7 +76,7 @@ the current API image rebuilds successfully and passes the complete verification
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
-Delivery receipts and non-image attachments remain for public-beta hardening.
+Non-image attachments remain outside the current messaging media scope.
 
 ## Decisions needed from owner
 
@@ -108,9 +109,23 @@ Delivery receipts and non-image attachments remain for public-beta hardening.
 
 ## Latest successful test run
 
-2026-08-18: a fresh API image built successfully; API Ruff and 102 tests passed;
+2026-08-18: a fresh API image built successfully; API Ruff and 104 tests passed;
 frontend lint, strict typecheck, 10 tests and production build passed;
-migration 0019 applied successfully and is at head.
+migration 0020 applied successfully and is at head.
+
+## Recipient delivery receipt verification
+
+- Delivery is acknowledged explicitly by the authenticated recipient client after
+  loading history; it is never inferred from Redis or notification dispatch.
+- Atomic `UPDATE ... RETURNING` targets only incoming undelivered messages and is
+  idempotent under retries and concurrency.
+- Reading fills only a missing delivery timestamp through `coalesce`, preserving
+  the earlier delivery time.
+- The inbox displays persisted sent, delivered and read states without presence or
+  last-seen tracking.
+- A fresh API image built successfully; Ruff and 104 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0020 (head)`.
 
 ## Private message image verification
 

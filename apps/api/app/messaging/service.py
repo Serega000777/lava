@@ -2,7 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import case, delete, exists, or_, select, update
+from sqlalchemy import case, delete, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -290,7 +290,10 @@ async def mark_conversation_read(
                     Message.sender_id != user_id,
                     Message.read_at.is_(None),
                 )
-                .values(read_at=read_at)
+                .values(
+                    read_at=read_at,
+                    delivered_at=func.coalesce(Message.delivered_at, read_at),
+                )
                 .returning(Message.id)
             )
         ).all()
@@ -300,6 +303,33 @@ async def mark_conversation_read(
         return {"read_count": 0, "read_at": None}
     await db.commit()
     return {"read_count": len(unread_ids), "read_at": read_at}
+
+
+async def mark_conversation_delivered(
+    db: AsyncSession,
+    conversation: Conversation,
+    user_id: uuid.UUID,
+) -> dict[str, object]:
+    delivered_at = datetime.now(UTC)
+    delivered_ids = list(
+        (
+            await db.scalars(
+                update(Message)
+                .where(
+                    Message.conversation_id == conversation.id,
+                    Message.sender_id != user_id,
+                    Message.delivered_at.is_(None),
+                )
+                .values(delivered_at=delivered_at)
+                .returning(Message.id)
+            )
+        ).all()
+    )
+    if not delivered_ids:
+        await db.rollback()
+        return {"delivered_count": 0, "delivered_at": None}
+    await db.commit()
+    return {"delivered_count": len(delivered_ids), "delivered_at": delivered_at}
 
 
 async def list_notifications(

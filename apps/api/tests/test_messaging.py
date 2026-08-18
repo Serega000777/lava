@@ -10,6 +10,7 @@ from app.messaging.service import (
     create_conversation,
     mute_conversation,
     mark_conversation_read,
+    mark_conversation_delivered,
     participant_conversation,
     send_message,
 )
@@ -171,5 +172,51 @@ async def test_read_receipt_updates_selected_incoming_messages() -> None:
     compiled = statement.compile()
     assert conversation.id in compiled.params.values()
     assert conversation.buyer_id in compiled.params.values()
+    assert "coalesce" in str(compiled).lower()
     db.execute.assert_not_awaited()
     db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delivery_receipt_updates_incoming_messages_atomically() -> None:
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        listing_id=uuid.uuid4(),
+        buyer_id=uuid.uuid4(),
+        seller_id=uuid.uuid4(),
+    )
+    delivered_ids = [uuid.uuid4(), uuid.uuid4()]
+    scalars = MagicMock()
+    scalars.all.return_value = delivered_ids
+    db = AsyncMock()
+    db.scalars.return_value = scalars
+
+    result = await mark_conversation_delivered(db, conversation, conversation.buyer_id)
+
+    assert result["delivered_count"] == 2
+    assert result["delivered_at"].tzinfo is not None
+    statement = db.scalars.await_args.args[0]
+    compiled = statement.compile()
+    assert conversation.id in compiled.params.values()
+    assert conversation.buyer_id in compiled.params.values()
+    db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delivery_receipt_retry_without_updates_rolls_back() -> None:
+    conversation = Conversation(
+        id=uuid.uuid4(),
+        listing_id=uuid.uuid4(),
+        buyer_id=uuid.uuid4(),
+        seller_id=uuid.uuid4(),
+    )
+    scalars = MagicMock()
+    scalars.all.return_value = []
+    db = AsyncMock()
+    db.scalars.return_value = scalars
+
+    result = await mark_conversation_delivered(db, conversation, conversation.buyer_id)
+
+    assert result == {"delivered_count": 0, "delivered_at": None}
+    db.commit.assert_not_awaited()
+    db.rollback.assert_awaited_once()

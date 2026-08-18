@@ -34,6 +34,9 @@ describe("MessagesPage", () => {
       if (input.endsWith("/conversations/conversation-1/read") && init?.method === "PATCH") {
         return { ok: true, status: 200, json: async () => ({ read_count: 1, read_at: "2026-08-14T00:00:01Z" }) };
       }
+      if (input.endsWith("/conversations/conversation-1/delivered") && init?.method === "PATCH") {
+        return { ok: true, status: 200, json: async () => ({ delivered_count: 1, delivered_at: "2026-08-14T00:00:01Z" }) };
+      }
       if (input.endsWith("/messages/message-1/reports") && init?.method === "POST") {
         return { ok: true, status: 201 };
       }
@@ -61,6 +64,7 @@ describe("MessagesPage", () => {
             body: "Оплатите по ссылке",
             created_at: "2026-08-14T00:00:00Z",
             read_at: null,
+            delivered_at: null,
             media: [{ id: "media-1", width: 32, height: 24 }],
           },
           {
@@ -69,6 +73,16 @@ describe("MessagesPage", () => {
             body: "Уже посмотрел",
             created_at: "2026-08-14T00:00:01Z",
             read_at: "2026-08-14T00:00:02Z",
+            delivered_at: "2026-08-14T00:00:01Z",
+            media: [],
+          },
+          {
+            id: "message-3",
+            sender_id: "buyer-1",
+            body: "Доставленное сообщение",
+            created_at: "2026-08-14T00:00:03Z",
+            delivered_at: "2026-08-14T00:00:04Z",
+            read_at: null,
             media: [],
           },
         ] };
@@ -79,6 +93,7 @@ describe("MessagesPage", () => {
     render(<MessagesPage />);
     const textarea = await screen.findByPlaceholderText("Напишите сообщение…");
     expect(await screen.findByText("Прочитано")).toBeInTheDocument();
+    expect(screen.getByText("Доставлено")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Изображение в сообщении" }))
       .toHaveAttribute("src", "http://localhost:8000/message-media/media-1");
     fireEvent.change(textarea, { target: { value: "Здравствуйте" } });

@@ -17,6 +17,7 @@ type Message = {
   sender_id: string;
   body: string;
   created_at: string;
+  delivered_at: string | null;
   read_at: string | null;
   media: Array<{ id: string; width: number; height: number }>;
 };
@@ -68,11 +69,17 @@ function Inbox() {
         if (!response.ok) throw new Error("messages failed");
         const loadedMessages = await response.json() as Message[];
         setMessages(loadedMessages);
+        const delivery = await apiFetch(`${apiUrl}/conversations/${selectedId}/delivered`, {
+          method: "PATCH",
+          credentials: "include",
+        });
         const receipt = await apiFetch(`${apiUrl}/conversations/${selectedId}/read`, {
           method: "PATCH",
           credentials: "include",
         });
-        if (!receipt.ok) setStatus("Сообщения загружены, но отметка о прочтении не сохранена.");
+        if (!delivery.ok && !receipt.ok) {
+          setStatus("Сообщения загружены, но статусы доставки не сохранены.");
+        }
       })
       .catch(() => setStatus("Не удалось загрузить сообщения."));
     if (selected) {
@@ -282,7 +289,11 @@ function Inbox() {
                     height={item.height}
                   />
                 ))}
-                {message.sender_id === me && message.read_at && <small>Прочитано</small>}
+                {message.sender_id === me && (
+                  <small>
+                    {message.read_at ? "Прочитано" : message.delivered_at ? "Доставлено" : "Отправлено"}
+                  </small>
+                )}
                 {message.sender_id !== me && (
                   <form onSubmit={(event) => void reportMessage(event, message.id)}>
                     <label className="sr-only" htmlFor={`report-reason-${message.id}`}>Причина жалобы</label>
