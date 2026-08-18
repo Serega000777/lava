@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Message Read Receipts — implementation and local verification complete.
+Private Message Images — implementation and local verification complete.
 
 ## Completed
 
@@ -47,6 +47,7 @@ Message Read Receipts — implementation and local verification complete.
 - Participant-scoped, rate-limited message reporting and moderator review are implemented.
 - Private participant-owned conversation notification mutes are implemented.
 - Atomic recipient-owned message read receipts are implemented without presence tracking.
+- Private normalized participant-authorized message images are implemented.
 
 ## In progress
 
@@ -74,7 +75,7 @@ the current API image rebuilds successfully and passes the complete verification
 ## Technical debt
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
-Message attachments and delivery receipts remain for public-beta hardening.
+Delivery receipts and non-image attachments remain for public-beta hardening.
 
 ## Decisions needed from owner
 
@@ -107,9 +108,22 @@ Message attachments and delivery receipts remain for public-beta hardening.
 
 ## Latest successful test run
 
-2026-08-14: a fresh API image built successfully; API Ruff and 96 tests passed;
+2026-08-18: a fresh API image built successfully; API Ruff and 102 tests passed;
 frontend lint, strict typecheck, 10 tests and production build passed;
-migration 0018 applied successfully and is at head.
+migration 0019 applied successfully and is at head.
+
+## Private message image verification
+
+- Upload requires message ownership, an unblocked conversation and an unreported
+  message; list/download requires participation or moderator permission.
+- JPEG, PNG and WebP are signature-decoded, byte/pixel/count bounded, stripped of
+  metadata and re-encoded as WebP before private storage.
+- Message locks serialize uploads with report creation, preserving evidence.
+- S3 objects and HTTP downloads use `private, no-store`; public URLs are absent.
+- Text remains durable when an optional image upload fails, with explicit UI state.
+- A fresh API image built successfully; Ruff and 102 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0019 (head)`.
 
 ## Message read receipt verification
 

@@ -18,6 +18,7 @@ type Message = {
   body: string;
   created_at: string;
   read_at: string | null;
+  media: Array<{ id: string; width: number; height: number }>;
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -85,6 +86,7 @@ function Inbox() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const body = String(form.get("body") ?? "").trim();
+    const media = form.get("media");
     if (!body || !selectedId) return;
     const response = await apiFetch(`${apiUrl}/conversations/${selectedId}/messages`, {
       method: "POST",
@@ -109,7 +111,25 @@ function Inbox() {
       return;
     }
     const message = await response.json() as Message;
-    setMessages((current) => [...current, message]);
+    setMessages((current) => [...current, { ...message, media: message.media ?? [] }]);
+    if (media instanceof File && media.size > 0) {
+      const upload = new FormData();
+      upload.set("file", media);
+      const mediaResponse = await apiFetch(`${apiUrl}/messages/${message.id}/media`, {
+        method: "POST",
+        credentials: "include",
+        body: upload,
+      });
+      if (!mediaResponse.ok) {
+        setStatus("Сообщение отправлено, но изображение загрузить не удалось.");
+        event.currentTarget.reset();
+        return;
+      }
+      const attached = await mediaResponse.json() as { id: string; width: number; height: number };
+      setMessages((current) => current.map((item) => (
+        item.id === message.id ? { ...item, media: [...item.media, attached] } : item
+      )));
+    }
     event.currentTarget.reset();
   }
 
@@ -251,6 +271,17 @@ function Inbox() {
             {messages.map((message) => (
               <div className={message.sender_id === me ? "message mine" : "message"} key={message.id}>
                 <p>{message.body}</p>
+                {message.media.map((item) => (
+                  // Authenticated media endpoint intentionally has no public URL.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={item.id}
+                    src={`${apiUrl}/message-media/${item.id}`}
+                    alt="Изображение в сообщении"
+                    width={item.width}
+                    height={item.height}
+                  />
+                ))}
                 {message.sender_id === me && message.read_at && <small>Прочитано</small>}
                 {message.sender_id !== me && (
                   <form onSubmit={(event) => void reportMessage(event, message.id)}>
@@ -284,6 +315,9 @@ function Inbox() {
               <form className="message-form" onSubmit={send}>
                 <label className="sr-only" htmlFor="message-body">Сообщение</label>
                 <textarea id="message-body" name="body" maxLength={4000} required disabled={selectedIsBlocked} placeholder="Напишите сообщение…" />
+                <label>Изображение
+                  <input name="media" type="file" accept="image/jpeg,image/png,image/webp" disabled={selectedIsBlocked} />
+                </label>
                 <button disabled={selectedIsBlocked}>Отправить</button>
               </form>
             </>

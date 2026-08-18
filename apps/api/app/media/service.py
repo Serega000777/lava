@@ -43,9 +43,10 @@ def normalize_image(raw: bytes) -> NormalizedImage:
         raise HTTPException(422, detail={"code": "invalid_image"}) from error
 
 
-async def read_limited(upload: UploadFile) -> bytes:
-    raw = await upload.read(settings.media_max_bytes + 1)
-    if len(raw) > settings.media_max_bytes:
+async def read_limited(upload: UploadFile, max_bytes: int | None = None) -> bytes:
+    limit = max_bytes if max_bytes is not None else settings.media_max_bytes
+    raw = await upload.read(limit + 1)
+    if len(raw) > limit:
         raise HTTPException(413, detail={"code": "media_too_large"})
     return raw
 

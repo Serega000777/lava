@@ -248,6 +248,28 @@ class Message(Base):
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class MessageMedia(Base):
+    __tablename__ = "message_media"
+    __table_args__ = (
+        CheckConstraint("position BETWEEN 0 AND 2"),
+        CheckConstraint("size_bytes > 0"),
+        UniqueConstraint("message_id", "position"),
+        UniqueConstraint("object_key"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+    object_key: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column()
+    width: Mapped[int] = mapped_column()
+    height: Mapped[int] = mapped_column()
+    position: Mapped[int] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Notification(Base):
     __tablename__ = "notifications"
     __table_args__ = (

@@ -61,4 +61,9 @@ Read receipts require conversation participation and atomically update only
 messages sent by the other participant. Lava does not expose online presence,
 last-seen time or reader device data.
 
+Message images are signature-decoded, pixel/byte/count bounded, metadata-stripped
+and re-encoded before private storage. Uploads require message ownership and an
+unblocked conversation; reads require participation or moderator permission.
+Message locks serialize uploads with reports so reported evidence cannot change.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

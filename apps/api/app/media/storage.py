@@ -26,13 +26,19 @@ class S3Storage:
                 raise
             self.client.create_bucket(Bucket=settings.s3_bucket)
 
-    def put(self, key: str, content: bytes, content_type: str) -> None:
+    def put(
+        self,
+        key: str,
+        content: bytes,
+        content_type: str,
+        cache_control: str = "public, max-age=31536000",
+    ) -> None:
         self.ensure_bucket()
         self.client.upload_fileobj(
             BytesIO(content),
             settings.s3_bucket,
             key,
-            ExtraArgs={"ContentType": content_type, "CacheControl": "public, max-age=31536000"},
+            ExtraArgs={"ContentType": content_type, "CacheControl": cache_control},
         )
 
     def get(self, key: str) -> bytes:

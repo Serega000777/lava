@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.message_media.schemas import MessageMediaResponse
+
 
 class MessageReportCreate(BaseModel):
     client_request_id: uuid.UUID
@@ -28,6 +30,7 @@ class ModerationMessageReportResponse(MessageReportResponse):
     reported_user_id: uuid.UUID
     message_body: str
     message_created_at: datetime
+    media: list[MessageMediaResponse] = Field(default_factory=list)
 
 
 class MessageReportDecision(BaseModel):

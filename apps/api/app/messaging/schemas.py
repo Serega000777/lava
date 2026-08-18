@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.message_media.schemas import MessageMediaResponse
+
 
 class ConversationCreate(BaseModel):
     listing_id: uuid.UUID
@@ -46,6 +48,7 @@ class MessageResponse(BaseModel):
     body: str
     created_at: datetime
     read_at: datetime | None
+    media: list[MessageMediaResponse] = Field(default_factory=list)
     model_config = {"from_attributes": True}
 
 

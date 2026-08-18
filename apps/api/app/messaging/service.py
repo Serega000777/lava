@@ -7,7 +7,15 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.models import Conversation, ConversationMute, Listing, Message, Notification, User
+from app.models import (
+    Conversation,
+    ConversationMute,
+    Listing,
+    Message,
+    MessageMedia,
+    Notification,
+    User,
+)
 from app.queueing.service import enqueue_notification_created
 from app.blocking.service import ensure_messaging_allowed
 
@@ -232,14 +240,39 @@ async def unmute_conversation(
 
 async def list_messages(
     db: AsyncSession, conversation_id: uuid.UUID, limit: int, offset: int
-) -> list[Message]:
-    return list((await db.scalars(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc(), Message.id)
-        .limit(limit)
-        .offset(offset)
-    )).all())
+) -> list[dict[str, object]]:
+    messages = list(
+        (
+            await db.scalars(
+                select(Message)
+                .where(Message.conversation_id == conversation_id)
+                .order_by(Message.created_at.asc(), Message.id)
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+    )
+    if not messages:
+        return []
+    media = list(
+        (
+            await db.scalars(
+                select(MessageMedia)
+                .where(MessageMedia.message_id.in_([message.id for message in messages]))
+                .order_by(MessageMedia.message_id, MessageMedia.position)
+            )
+        ).all()
+    )
+    media_by_message: dict[uuid.UUID, list[MessageMedia]] = {}
+    for item in media:
+        media_by_message.setdefault(item.message_id, []).append(item)
+    return [
+        {
+            **{column.name: getattr(message, column.name) for column in Message.__table__.columns},
+            "media": media_by_message.get(message.id, []),
+        }
+        for message in messages
+    ]
 
 
 async def mark_conversation_read(

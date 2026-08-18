@@ -61,6 +61,7 @@ describe("MessagesPage", () => {
             body: "Оплатите по ссылке",
             created_at: "2026-08-14T00:00:00Z",
             read_at: null,
+            media: [{ id: "media-1", width: 32, height: 24 }],
           },
           {
             id: "message-2",
@@ -68,6 +69,7 @@ describe("MessagesPage", () => {
             body: "Уже посмотрел",
             created_at: "2026-08-14T00:00:01Z",
             read_at: "2026-08-14T00:00:02Z",
+            media: [],
           },
         ] };
       }
@@ -77,6 +79,8 @@ describe("MessagesPage", () => {
     render(<MessagesPage />);
     const textarea = await screen.findByPlaceholderText("Напишите сообщение…");
     expect(await screen.findByText("Прочитано")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Изображение в сообщении" }))
+      .toHaveAttribute("src", "http://localhost:8000/message-media/media-1");
     fireEvent.change(textarea, { target: { value: "Здравствуйте" } });
     fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
 

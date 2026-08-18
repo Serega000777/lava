@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     media_max_bytes: int = 10 * 1024 * 1024
     media_max_per_listing: int = 10
     media_max_pixels: int = 20_000_000
+    message_media_max_bytes: int = 5 * 1024 * 1024
+    message_media_max_per_message: int = 3
     metrics_token: SecretStr | None = None
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -39,6 +41,13 @@ class Settings(BaseSettings):
             return None
         if isinstance(raw, str) and len(raw) < 32:
             raise ValueError("metrics_token must contain at least 32 characters")
+        return value
+
+    @field_validator("message_media_max_per_message")
+    @classmethod
+    def validate_message_media_limit(cls, value: int) -> int:
+        if not 1 <= value <= 3:
+            raise ValueError("message_media_max_per_message must be between 1 and 3")
         return value
 
     @property

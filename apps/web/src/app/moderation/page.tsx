@@ -34,6 +34,7 @@ type MessageReport = {
   details: string;
   message_body: string;
   reported_user_id: string;
+  media: Array<{ id: string; width: number; height: number }>;
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -219,6 +220,17 @@ export default function ModerationPage() {
                 <strong>{item.reason_code}</strong>
                 <small>Сообщение {item.message_id} · пользователь {item.reported_user_id}</small>
                 <p>{item.message_body}</p>
+                {item.media.map((media) => (
+                  // Permission-gated evidence endpoint intentionally has no public URL.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={media.id}
+                    src={`${apiUrl}/moderation/message-media/${media.id}`}
+                    alt="Вложение из жалобы"
+                    width={media.width}
+                    height={media.height}
+                  />
+                ))}
                 {item.details && <p>{item.details}</p>}
               </div>
               <div className="moderation-actions">

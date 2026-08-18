@@ -17,6 +17,7 @@ describe("ModerationPage", () => {
             reason_code: "spam",
             details: "",
             message_body: "Оплатите по ссылке",
+            media: [{ id: "evidence-1", width: 32, height: 24 }],
           }];
         }
         if (url.includes("/complaints")) {
@@ -57,6 +58,8 @@ describe("ModerationPage", () => {
     expect(screen.getByRole("heading", { name: "Жалобы" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Сообщения" })).toBeInTheDocument();
     expect(screen.getByText("Оплатите по ссылке")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Вложение из жалобы" }))
+      .toHaveAttribute("src", "http://localhost:8000/moderation/message-media/evidence-1");
     expect(screen.getByRole("heading", { name: "Апелляции" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Возможна координация");
   });

@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.message_reports.schemas import MessageReportCreate, MessageReportDecision
-from app.models import Conversation, Message, MessageReport
+from app.models import Conversation, Message, MessageMedia, MessageReport
 
 
 def report_payload_matches(report: MessageReport, message_id: uuid.UUID, data: MessageReportCreate) -> bool:
@@ -40,6 +40,7 @@ async def create_message_report(
                 Message.id == message_id,
                 (Conversation.buyer_id == reporter_id) | (Conversation.seller_id == reporter_id),
             )
+            .with_for_update(of=Message)
         )
     ).one_or_none()
     if row is None:
@@ -100,11 +101,29 @@ async def list_message_reports(
             .offset(offset)
         )
     ).all()
+    reports = [report for report, _body, _created_at in rows]
+    media = (
+        list(
+            (
+                await db.scalars(
+                    select(MessageMedia)
+                    .where(MessageMedia.message_id.in_([report.message_id for report in reports]))
+                    .order_by(MessageMedia.message_id, MessageMedia.position)
+                )
+            ).all()
+        )
+        if reports
+        else []
+    )
+    media_by_message: dict[uuid.UUID, list[MessageMedia]] = {}
+    for item in media:
+        media_by_message.setdefault(item.message_id, []).append(item)
     return [
         {
             **{column.name: getattr(report, column.name) for column in MessageReport.__table__.columns},
             "message_body": body,
             "message_created_at": message_created_at,
+            "media": media_by_message.get(report.message_id, []),
         }
         for report, body, message_created_at in rows
     ]
