@@ -49,6 +49,14 @@ describe("MessagesPage", () => {
             counterpart_id: "seller-1",
             counterpart_name: "Продавец",
             is_muted: false,
+            unread_count: 1,
+          }, {
+            id: "conversation-2",
+            listing_title: "Компрессор",
+            counterpart_id: "seller-2",
+            counterpart_name: "Магазин",
+            is_muted: false,
+            unread_count: 2,
           }],
         };
       }
@@ -92,6 +100,7 @@ describe("MessagesPage", () => {
 
     render(<MessagesPage />);
     const textarea = await screen.findByPlaceholderText("Напишите сообщение…");
+    expect(screen.getByLabelText("Непрочитанных сообщений: 2")).toHaveTextContent("2");
     expect(await screen.findByText("Прочитано")).toBeInTheDocument();
     expect(screen.getByText("Доставлено")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Изображение в сообщении" }))

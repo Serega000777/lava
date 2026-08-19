@@ -3,7 +3,8 @@
 Authenticated endpoints:
 
 - `POST /conversations` opens or returns the buyer's listing conversation.
-- `GET /conversations` returns participant-scoped summaries.
+- `GET /conversations` returns participant-scoped summaries with an incoming
+  unread-message count owned by the current participant.
 - `GET /conversations/{id}/messages` returns a bounded message page.
 - `POST /conversations/{id}/messages` accepts a trimmed body and client UUID.
 - `GET /notifications` returns private newest-first alerts.
@@ -49,7 +50,11 @@ history reads or inbox ordering, and it is not visible to the other participant.
 `PATCH /conversations/{id}/read` atomically marks only unread messages sent by the
 other participant. The persisted `read_at` value is included in message DTOs, so
 senders see a truthful receipt after refresh. The endpoint is idempotent and does
-not implement presence or last-seen tracking.
+not implement presence or last-seen tracking. In the same transaction it marks
+the current participant's unread notifications for that conversation read. The
+conversation row serializes this operation with new-message persistence so a
+concurrent notification cannot be cleared ahead of its message. The inbox clears
+the selected conversation badge only after this request succeeds.
 
 Message images use private participant-authorized endpoints. JPEG, PNG and WebP
 inputs are limited to 5 MiB, decoded by signature, stripped of metadata and

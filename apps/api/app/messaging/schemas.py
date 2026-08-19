@@ -25,6 +25,7 @@ class ConversationSummary(ConversationResponse):
     counterpart_id: uuid.UUID
     counterpart_name: str
     is_muted: bool
+    unread_count: int
 
 
 class MessageCreate(BaseModel):

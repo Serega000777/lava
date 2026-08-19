@@ -11,6 +11,7 @@ type Conversation = {
   counterpart_id: string;
   counterpart_name: string;
   is_muted: boolean;
+  unread_count: number;
 };
 type Message = {
   id: string;
@@ -35,6 +36,7 @@ function Inbox() {
   const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
   const [reportedMessages, setReportedMessages] = useState<Set<string>>(new Set());
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedId);
+  const selectedCounterpartId = selectedConversation?.counterpart_id;
   const selectedIsBlocked = selectedConversation
     ? blockedUsers.has(selectedConversation.counterpart_id)
     : false;
@@ -63,7 +65,6 @@ function Inbox() {
 
   useEffect(() => {
     if (!selectedId) return;
-    const selected = conversations.find((conversation) => conversation.id === selectedId);
     fetch(`${apiUrl}/conversations/${selectedId}/messages`, { credentials: "include" })
       .then(async (response) => {
         if (!response.ok) throw new Error("messages failed");
@@ -77,17 +78,30 @@ function Inbox() {
           method: "PATCH",
           credentials: "include",
         });
+        if (receipt.ok) {
+          setConversations((current) => {
+            let changed = false;
+            const next = current.map((conversation) => {
+              if (conversation.id !== selectedId || conversation.unread_count === 0) {
+                return conversation;
+              }
+              changed = true;
+              return { ...conversation, unread_count: 0 };
+            });
+            return changed ? next : current;
+          });
+        }
         if (!delivery.ok && !receipt.ok) {
           setStatus("Сообщения загружены, но статусы доставки не сохранены.");
         }
       })
       .catch(() => setStatus("Не удалось загрузить сообщения."));
-    if (selected) {
-      fetch(`${apiUrl}/users/${selected.counterpart_id}/reputation`)
+    if (selectedCounterpartId) {
+      fetch(`${apiUrl}/users/${selectedCounterpartId}/reputation`)
         .then((response) => response.ok ? response.json() : null)
         .then((data) => setReputation(data));
     }
-  }, [conversations, selectedId]);
+  }, [selectedCounterpartId, selectedId]);
 
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -247,7 +261,17 @@ function Inbox() {
               key={conversation.id}
               onClick={() => setSelectedId(conversation.id)}
             >
-              <strong>{conversation.counterpart_name}</strong>
+              <span className="conversation-heading">
+                <strong>{conversation.counterpart_name}</strong>
+                {conversation.unread_count > 0 && (
+                  <span
+                    className="unread-badge"
+                    aria-label={`Непрочитанных сообщений: ${conversation.unread_count}`}
+                  >
+                    {conversation.unread_count}
+                  </span>
+                )}
+              </span>
               <span>{conversation.listing_title}</span>
             </button>
           ))}

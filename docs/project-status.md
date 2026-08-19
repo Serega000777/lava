@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Recipient Delivery Receipts — implementation and local verification complete.
+Conversation Unread Counters — implementation and local verification complete.
 
 ## Completed
 
@@ -49,6 +49,8 @@ Recipient Delivery Receipts — implementation and local verification complete.
 - Atomic recipient-owned message read receipts are implemented without presence tracking.
 - Private normalized participant-authorized message images are implemented.
 - Recipient-confirmed atomic delivery receipts are implemented without presence tracking.
+- Participant-owned conversation unread counters and notification-read synchronization
+  are implemented.
 
 ## In progress
 
@@ -109,9 +111,24 @@ Non-image attachments remain outside the current messaging media scope.
 
 ## Latest successful test run
 
-2026-08-18: a fresh API image built successfully; API Ruff and 104 tests passed;
+2026-08-19: a fresh API image built successfully; API Ruff and 106 tests passed;
 frontend lint, strict typecheck, 10 tests and production build passed;
 migration 0020 applied successfully and is at head.
+
+## Conversation unread counter verification
+
+- Conversation summaries count only unread incoming messages for the authenticated
+  participant; the counterpart's private read state is never returned.
+- The existing partial unread-message index supports the correlated count, so no
+  schema migration is required.
+- Marking a conversation read clears owned conversation notifications in the same
+  transaction as incoming message receipts, including stale notification-only state;
+  a conversation row lock prevents races with concurrent sends.
+- The inbox displays accessible badges and clears the selected badge only after the
+  server accepts the read receipt, without triggering a fetch loop.
+- A fresh API image built successfully; Ruff and 106 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0020 (head)`.
 
 ## Recipient delivery receipt verification
 

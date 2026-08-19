@@ -201,6 +201,15 @@ async def list_conversations(
                 ConversationMute.conversation_id == Conversation.id,
             )
             .label("is_muted"),
+            select(func.count(Message.id))
+            .where(
+                Message.conversation_id == Conversation.id,
+                Message.sender_id != user_id,
+                Message.read_at.is_(None),
+            )
+            .correlate(Conversation)
+            .scalar_subquery()
+            .label("unread_count"),
         )
         .join(Listing, Listing.id == Conversation.listing_id)
         .join(buyer, buyer.id == Conversation.buyer_id)
@@ -280,6 +289,11 @@ async def mark_conversation_read(
     conversation: Conversation,
     user_id: uuid.UUID,
 ) -> dict[str, object]:
+    await db.execute(
+        select(Conversation.id)
+        .where(Conversation.id == conversation.id)
+        .with_for_update()
+    )
     read_at = datetime.now(UTC)
     unread_ids = list(
         (
@@ -298,11 +312,28 @@ async def mark_conversation_read(
             )
         ).all()
     )
-    if not unread_ids:
+    notification_ids = list(
+        (
+            await db.scalars(
+                update(Notification)
+                .where(
+                    Notification.user_id == user_id,
+                    Notification.conversation_id == conversation.id,
+                    Notification.read_at.is_(None),
+                )
+                .values(read_at=read_at)
+                .returning(Notification.id)
+            )
+        ).all()
+    )
+    if not unread_ids and not notification_ids:
         await db.rollback()
         return {"read_count": 0, "read_at": None}
     await db.commit()
-    return {"read_count": len(unread_ids), "read_at": read_at}
+    return {
+        "read_count": len(unread_ids),
+        "read_at": read_at if unread_ids else None,
+    }
 
 
 async def mark_conversation_delivered(

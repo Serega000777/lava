@@ -70,4 +70,10 @@ Delivery receipts require participant authorization and an explicit recipient
 client acknowledgment. They reveal no presence, last-seen, typing or device data;
 read implies delivery and neither timestamp is derived from queue dispatch.
 
+Conversation unread counts are computed only for the authenticated participant's
+incoming messages. They do not expose the counterpart's unread state. Opening a
+conversation clears only that participant's related notification rows in the same
+transaction as message read receipts. A conversation row lock serializes this
+operation with sends, preventing contradictory private counters under concurrency.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.
