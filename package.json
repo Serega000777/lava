@@ -2,20 +2,23 @@
   "name": "lava",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["apps/web", "packages/*"],
+  "workspaces": ["apps/web", "apps/mobile", "packages/*"],
   "scripts": {
     "dev": "npm run dev --workspace @lava/web",
     "build": "npm run build --workspace @lava/web",
     "lint": "npm run lint --workspace @lava/web",
     "typecheck": "npm run typecheck --workspace @lava/web",
     "test": "npm run test --workspace @lava/web",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run build"
+    "mobile": "npm run start --workspace @lava/mobile",
+    "check:mobile": "npm run check --workspace @lava/mobile",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run build && npm run check:mobile"
   },
   "engines": {
     "node": ">=22"
   },
-  "overrides": {
-    "postcss": "8.5.22",
-    "sharp": "0.35.3"
+  "devDependencies": {
+    "expo": "~57.0.15",
+    "react": "19.2.3",
+    "react-native": "0.86.2"
   }
 }

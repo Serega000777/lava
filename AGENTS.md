@@ -5,6 +5,7 @@ Lava is a trustworthy AI-assisted classifieds platform built as a modular monoli
 ## Architecture
 
 - `apps/web`: Next.js user interface.
+- `apps/mobile`: Expo test client and future native application boundary.
 - `apps/api`: FastAPI HTTP API with application, domain, repository and infrastructure boundaries.
 - `apps/worker`: background jobs using the same domain contracts.
 - `packages`: shared TypeScript packages.
@@ -16,7 +17,9 @@ Keep business logic out of React components and HTTP handlers. External services
 ## Commands
 
 - `docker compose up --build`: start the complete local foundation.
-- `npm ci && npm run check`: validate the web workspace.
+- `npm ci && npm run check`: validate the web and mobile workspaces.
+- `npm run mobile`: start Expo in LAN mode for a physical phone.
+- `npm run check:mobile`: lint, typecheck, test and export the Android bundle.
 - `python -m pytest apps/api/tests`: run API tests.
 - `docker compose run --rm api alembic upgrade head`: apply migrations.
 - `docker compose run --rm api python -m app.seed`: seed categories.
@@ -39,4 +42,3 @@ Keep business logic out of React components and HTTP handlers. External services
 Implementation, authorization, validation, error/loading states, tests, lint, types, build, migrations, documentation and local verification all pass. Review the diff before an intentional commit; never force-push `main`.
 
 Key documents: `docs/product-requirements.md`, `docs/architecture.md`, `docs/threat-model.md`, `docs/project-status.md`, and `docs/decisions/`.
-

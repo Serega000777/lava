@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Conversation Unread Counters — implementation and local verification complete.
+Expo Mobile Test Foundation — implementation and local verification complete.
 
 ## Completed
 
@@ -11,7 +11,8 @@ Conversation Unread Counters — implementation and local verification complete.
 - Monorepo source, local infrastructure, initial migration, seed and UI prepared.
 - Frontend lint, strict typecheck, unit test and production build pass.
 - API Ruff lint and health test pass.
-- npm production/development dependency audit reports zero known vulnerabilities.
+- Web runtime dependencies were updated to Next.js 16.3.1 and React 19.2.3;
+  current known npm advisories are isolated to the Expo build toolchain.
 - Docker Compose configuration validates.
 - Full Docker stack starts successfully; API and dependencies report healthy.
 - Initial Alembic migration applies and the idempotent seed creates cars, goods and services.
@@ -51,6 +52,8 @@ Conversation Unread Counters — implementation and local verification complete.
 - Recipient-confirmed atomic delivery receipts are implemented without presence tracking.
 - Participant-owned conversation unread counters and notification-read synchronization
   are implemented.
+- Expo SDK 57 phone-test client, shared runtime API contracts and LAN development
+  workflow are implemented without duplicating backend business rules.
 
 ## In progress
 
@@ -62,6 +65,8 @@ None.
 
 ## Next tasks
 
+- Continue the prescribed roadmap with interaction/deal-intent state and confirmed
+  reviews before expanding the mobile client into private MVP flows.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -72,6 +77,10 @@ None.
 Production SMS and VK providers are disabled. Recovery currently uses the local
 OTP adapter and must not be enabled publicly until an approved SMS provider exists.
 
+The Expo client currently exercises only public health, category and search
+contracts. Native authentication, secure session storage, media permissions and
+push notifications require their own reviewed roadmap slices.
+
 The earlier local Docker BuildKit hang was resolved by reducing the build context;
 the current API image rebuilds successfully and passes the complete verification.
 
@@ -79,6 +88,9 @@ the current API image rebuilds successfully and passes the complete verification
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
 Non-image attachments remain outside the current messaging media scope.
+`npm audit --omit=dev` reports 15 non-critical findings (10 moderate, 5 high)
+through the current Expo CLI/Metro/Xcode dependency graph. The suggested automatic
+fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched releases.
 
 ## Decisions needed from owner
 
@@ -91,7 +103,8 @@ Non-image attachments remain outside the current messaging media scope.
 - `npm run typecheck` — passed.
 - `npm run test` — passed.
 - `npm run build` — passed.
-- `npm audit` — zero vulnerabilities after patched transitive overrides.
+- `npm audit --omit=dev` — no critical findings; 15 upstream Expo toolchain
+  findings remain documented and cannot be safely auto-fixed.
 - `python -m ruff check apps/api` — passed.
 - `python -m pytest apps/api/tests -q` — passed.
 - `docker compose config --quiet` — passed.
@@ -111,9 +124,25 @@ Non-image attachments remain outside the current messaging media scope.
 
 ## Latest successful test run
 
-2026-08-19: a fresh API image built successfully; API Ruff and 106 tests passed;
-frontend lint, strict typecheck, 10 tests and production build passed;
-migration 0020 applied successfully and is at head.
+2026-08-21: full web lint, strict typecheck, 10 tests and Next.js 16.3.1
+production build passed; Expo lint, strict typecheck, 5 tests and Android bundle
+export passed; API Ruff and 106 tests passed; migration 0020 is at head.
+
+## Expo mobile test foundation verification
+
+- `apps/mobile` uses Expo SDK 57 with strict TypeScript and a feature/API boundary;
+  it does not contain marketplace business rules or private session workarounds.
+- `packages/api-contracts` validates health, categories and search payloads with
+  shared Zod schemas before the phone UI renders them.
+- Missing or malformed API configuration, timeouts, non-success responses and
+  untrusted payloads produce bounded safe states; server error bodies are hidden.
+- `npx expo install --check` reports dependencies up to date. Expo Doctor passes
+  20 of 21 checks; only its remote config-schema request fails because the service
+  returns HTML, while local `npx expo config --type public` succeeds.
+- Metro started in LAN mode at `exp://<LAN-IP>:8081`; its LAN HTTP endpoint and
+  FastAPI at `http://<LAN-IP>:8000/health` both returned 200 locally.
+- Web regression passed after aligning React/React DOM 19.2.3 and updating Next.js
+  16.3.1; backend behavior and database schema are unchanged.
 
 ## Conversation unread counter verification
 

@@ -76,4 +76,11 @@ conversation clears only that participant's related notification rows in the sam
 transaction as message read receipts. A conversation row lock serializes this
 operation with sends, preventing contradictory private counters under concurrency.
 
+The Expo test client accepts only a public API origin through `EXPO_PUBLIC_API_URL`;
+this value is not a secret. Its API adapter validates response schemas, applies a
+bounded timeout and never renders server error bodies. The current shell does not
+implement native authentication or persist session material. Private mobile flows
+remain disabled until opaque sessions can be stored in OS-backed secure storage,
+revoked server-side and transported without weakening browser CSRF protection.
+
 Production SMS, VK, AI and payment integrations remain disabled until credentials, provider reviews and legal policies are approved.

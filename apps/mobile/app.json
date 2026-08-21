@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Lava",
+    "slug": "lava-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "lava",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ru.lava.market"
+    },
+    "android": {
+      "package": "ru.lava.market"
+    }
+  }
+}

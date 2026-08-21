@@ -6,9 +6,10 @@ Lava starts as a modular monolith in a monorepo. Web, API and worker are deploya
 
 ```text
 Browser -> Next.js -> FastAPI -> PostgreSQL
-                         |-----> Redis
-                         |-----> S3/MinIO
-                         `-----> background queue -> Worker
+Phone ---> Expo --------> FastAPI -> PostgreSQL
+                            |-----> Redis
+                            |-----> S3/MinIO
+                            `-----> background queue -> Worker
 ```
 
 The initial vertical slice contains system health and the category catalog. Future modules: identity, profiles, listings, media, search, moderation, messaging, reputation, AI, credits and admin.
@@ -24,3 +25,11 @@ Docker Compose is the supported local path. Production will use separately manag
 Background work uses a PostgreSQL transactional outbox as durable queue state.
 Workers claim rows with `SKIP LOCKED` and publish bounded notification streams to
 Redis. This avoids the commit/enqueue gap while preserving replaceable adapters.
+
+The Expo application is a client boundary, not a second backend. It consumes the
+same FastAPI contracts as the web application and keeps presentation orchestration
+inside feature modules. Runtime response schemas live in `packages/api-contracts`
+so untrusted network payloads are validated before rendering. The initial mobile
+slice intentionally uses only public endpoints; native authentication requires a
+separately reviewed token transport and secure device storage before private
+screens are enabled.

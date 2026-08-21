@@ -11,3 +11,7 @@
 9. Admin and seller analytics.
 10. Security, accessibility, performance and production hardening.
 
+An Expo test shell is maintained alongside the MVP so public API and responsive
+product flows can be exercised on physical phones. This is architectural
+preparation, not an early replacement of the stage order or a claim that the
+full mobile application is part of MVP.
