@@ -10,6 +10,11 @@ interactions/reviews, complaints/appeals, notifications, transactional outbox
 tasks, AI jobs/versions, immutable credit ledger entries and audit events. Foreign
 keys, uniqueness constraints and partial indexes enforce invariants.
 
+Migration 0021 makes interactions explicit. Each conversation has one interaction
+with a first-contact timestamp and immutable buyer/seller completion timestamps.
+Both confirmations are required for completion. Reviews reference the matching
+interaction and conversation through a composite foreign key and cannot be updated.
+
 Migration 0012 adds append-only `verification_decisions`. Sensitive identity
 evidence is intentionally excluded from the MVP database.
 Migration 0013 enforces decision immutability with a database trigger.

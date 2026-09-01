@@ -146,6 +146,10 @@ async def test_muted_recipient_gets_message_without_notification(monkeypatch) ->
     assert db.scalar.await_count == 4
     enqueue.assert_not_awaited()
     assert conversation.updated_at is not None
+    contact_statement = db.execute.await_args.args[0]
+    contact_sql = str(contact_statement.compile()).lower()
+    assert "insert into interactions" in contact_sql
+    assert "on conflict (conversation_id) do update" in contact_sql
     db.commit.assert_awaited_once()
 
 

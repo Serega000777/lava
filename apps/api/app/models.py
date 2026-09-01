@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Numeric,
     SmallInteger,
@@ -217,6 +218,39 @@ class Conversation(Base):
     )
 
 
+class Interaction(Base):
+    __tablename__ = "interactions"
+    __table_args__ = (
+        UniqueConstraint("conversation_id"),
+        UniqueConstraint("id", "conversation_id"),
+        CheckConstraint(
+            "(completed_at IS NOT NULL) = "
+            "(buyer_confirmed_at IS NOT NULL AND seller_confirmed_at IS NOT NULL)"
+        ),
+        CheckConstraint(
+            "(buyer_confirmed_at IS NULL AND seller_confirmed_at IS NULL) "
+            "OR contacted_at IS NOT NULL"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE")
+    )
+    contacted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    buyer_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    seller_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class ConversationMute(Base):
     __tablename__ = "conversation_mutes"
 
@@ -355,12 +389,18 @@ class Review(Base):
         CheckConstraint("rating BETWEEN 1 AND 5"),
         CheckConstraint("reviewer_id <> reviewee_id"),
         UniqueConstraint("conversation_id", "reviewer_id"),
+        ForeignKeyConstraint(
+            ["interaction_id", "conversation_id"],
+            ["interactions.id", "interactions.conversation_id"],
+            ondelete="CASCADE",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE")
     )
+    interaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     reviewer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )

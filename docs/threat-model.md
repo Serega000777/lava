@@ -76,6 +76,14 @@ conversation clears only that participant's related notification rows in the sam
 transaction as message read receipts. A conversation row lock serializes this
 operation with sends, preventing contradictory private counters under concurrency.
 
+Message exchange alone no longer unlocks reviews. A transaction becomes reviewable
+only after both authenticated conversation participants explicitly confirm it.
+Row locks prevent lost confirmation races, database constraints reject partial
+completion, and triggers prevent confirmation or review history from being
+rewritten. The API returns role-relative booleans rather than either party's private
+confirmation timestamp. Collusive confirmations remain possible and require the
+planned anomaly, dispute and moderation workflows before reputation affects search.
+
 The Expo test client accepts only a public API origin through `EXPO_PUBLIC_API_URL`;
 this value is not a secret. Its API adapter validates response schemas, applies a
 bounded timeout and never renders server error bodies. The current shell does not

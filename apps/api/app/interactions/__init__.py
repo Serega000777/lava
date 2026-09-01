@@ -1,0 +1,1 @@
+"""Confirmed marketplace interaction domain."""

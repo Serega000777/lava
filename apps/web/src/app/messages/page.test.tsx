@@ -31,6 +31,22 @@ describe("MessagesPage", () => {
       if (input.endsWith("/conversations/conversation-1/mute") && init?.method === "PUT") {
         return { ok: true, status: 204 };
       }
+      if (input.endsWith("/conversations/conversation-1/interaction/completion") && init?.method === "PUT") {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            id: "interaction-1",
+            conversation_id: "conversation-1",
+            status: "contacted",
+            my_completion_confirmed: true,
+            counterpart_completion_confirmed: false,
+            completed_at: null,
+            can_review: false,
+            review_created: false,
+          }),
+        };
+      }
       if (input.endsWith("/conversations/conversation-1/read") && init?.method === "PATCH") {
         return { ok: true, status: 200, json: async () => ({ read_count: 1, read_at: "2026-08-14T00:00:01Z" }) };
       }
@@ -61,6 +77,21 @@ describe("MessagesPage", () => {
         };
       }
       if (input.includes("/reputation")) return { ok: false };
+      if (input.endsWith("/conversations/conversation-1/interaction")) {
+        return {
+          ok: true,
+          json: async () => ({
+            id: "interaction-1",
+            conversation_id: "conversation-1",
+            status: "contacted",
+            my_completion_confirmed: false,
+            counterpart_completion_confirmed: false,
+            completed_at: null,
+            can_review: false,
+            review_created: false,
+          }),
+        };
+      }
       if (input.endsWith("/messages") && init?.method === "POST") {
         return { ok: false, status: 429 };
       }
@@ -122,5 +153,9 @@ describe("MessagesPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Пожаловаться" }));
     expect(await screen.findByText("Жалоба на сообщение отправлена модератору.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Жалоба отправлена" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Подтвердить, что сделка состоялась" }));
+    expect(await screen.findByText(/Ваше подтверждение сохранено/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Подтвердить, что сделка состоялась" })).not.toBeInTheDocument();
   });
 });

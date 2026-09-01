@@ -22,6 +22,16 @@ type Message = {
   read_at: string | null;
   media: Array<{ id: string; width: number; height: number }>;
 };
+type Interaction = {
+  id: string;
+  conversation_id: string;
+  status: "awaiting_contact" | "contacted" | "completed";
+  my_completion_confirmed: boolean;
+  counterpart_completion_confirmed: boolean;
+  completed_at: string | null;
+  can_review: boolean;
+  review_created: boolean;
+};
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -32,11 +42,18 @@ function Inbox() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [me, setMe] = useState("");
   const [status, setStatus] = useState("Загружаем диалоги…");
-  const [reputation, setReputation] = useState<{ average_rating: string | null; review_count: number } | null>(null);
+  const [reputation, setReputation] = useState<{
+    user_id: string;
+    average_rating: string | null;
+    review_count: number;
+  } | null>(null);
+  const [interaction, setInteraction] = useState<Interaction | null>(null);
   const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
   const [reportedMessages, setReportedMessages] = useState<Set<string>>(new Set());
   const selectedConversation = conversations.find((conversation) => conversation.id === selectedId);
+  const activeInteraction = interaction?.conversation_id === selectedId ? interaction : null;
   const selectedCounterpartId = selectedConversation?.counterpart_id;
+  const activeReputation = reputation?.user_id === selectedCounterpartId ? reputation : null;
   const selectedIsBlocked = selectedConversation
     ? blockedUsers.has(selectedConversation.counterpart_id)
     : false;
@@ -65,7 +82,11 @@ function Inbox() {
 
   useEffect(() => {
     if (!selectedId) return;
-    fetch(`${apiUrl}/conversations/${selectedId}/messages`, { credentials: "include" })
+    const controller = new AbortController();
+    fetch(`${apiUrl}/conversations/${selectedId}/messages`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
       .then(async (response) => {
         if (!response.ok) throw new Error("messages failed");
         const loadedMessages = await response.json() as Message[];
@@ -73,10 +94,12 @@ function Inbox() {
         const delivery = await apiFetch(`${apiUrl}/conversations/${selectedId}/delivered`, {
           method: "PATCH",
           credentials: "include",
+          signal: controller.signal,
         });
         const receipt = await apiFetch(`${apiUrl}/conversations/${selectedId}/read`, {
           method: "PATCH",
           credentials: "include",
+          signal: controller.signal,
         });
         if (receipt.ok) {
           setConversations((current) => {
@@ -95,12 +118,33 @@ function Inbox() {
           setStatus("Сообщения загружены, но статусы доставки не сохранены.");
         }
       })
-      .catch(() => setStatus("Не удалось загрузить сообщения."));
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setStatus("Не удалось загрузить сообщения.");
+        }
+      });
+    fetch(`${apiUrl}/conversations/${selectedId}/interaction`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("interaction failed");
+        setInteraction(await response.json() as Interaction);
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setStatus("Не удалось загрузить статус сделки.");
+        }
+      });
     if (selectedCounterpartId) {
-      fetch(`${apiUrl}/users/${selectedCounterpartId}/reputation`)
+      fetch(`${apiUrl}/users/${selectedCounterpartId}/reputation`, {
+        signal: controller.signal,
+      })
         .then((response) => response.ok ? response.json() : null)
-        .then((data) => setReputation(data));
+        .then((data) => setReputation(data))
+        .catch(() => undefined);
     }
+    return () => controller.abort();
   }, [selectedCounterpartId, selectedId]);
 
   async function send(event: FormEvent<HTMLFormElement>) {
@@ -224,8 +268,9 @@ function Inbox() {
 
   async function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const reviewedConversationId = selectedId;
     const form = new FormData(event.currentTarget);
-    const response = await apiFetch(`${apiUrl}/conversations/${selectedId}/review`, {
+    const response = await apiFetch(`${apiUrl}/conversations/${reviewedConversationId}/review`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -235,7 +280,7 @@ function Inbox() {
       }),
     });
     if (response.status === 409) {
-      setStatus("Отзыв доступен после двустороннего общения и создаётся один раз.");
+      setStatus("Отзыв доступен после подтверждения сделки обеими сторонами и создаётся один раз.");
       return;
     }
     if (!response.ok) {
@@ -243,7 +288,36 @@ function Inbox() {
       return;
     }
     setStatus("Отзыв опубликован.");
+    setInteraction((current) => current?.conversation_id === reviewedConversationId ? {
+        ...current,
+        can_review: false,
+        review_created: true,
+      } : current);
     event.currentTarget.reset();
+  }
+
+  async function confirmCompletion() {
+    if (!selectedId) return;
+    const confirmedConversationId = selectedId;
+    const response = await apiFetch(`${apiUrl}/conversations/${confirmedConversationId}/interaction/completion`, {
+      method: "PUT",
+      credentials: "include",
+    });
+    if (response.status === 409) {
+      setStatus("Сначала отправьте сообщение по этому объявлению.");
+      return;
+    }
+    if (!response.ok) {
+      setStatus("Не удалось подтвердить сделку.");
+      return;
+    }
+    const updated = await response.json() as Interaction;
+    setInteraction((current) => current?.conversation_id === confirmedConversationId
+      ? updated
+      : current);
+    setStatus(updated.status === "completed"
+      ? "Сделка подтверждена обеими сторонами. Теперь можно оставить отзыв."
+      : "Ваше подтверждение сохранено. Ожидаем подтверждение собеседника.");
   }
 
   return (
@@ -278,9 +352,9 @@ function Inbox() {
           {status && <p role="status">{status}</p>}
         </aside>
         <section className="message-panel" aria-label="Сообщения диалога">
-          {selectedId && reputation && (
+          {selectedId && activeReputation && (
             <p className="reputation-line">
-              Репутация собеседника: {reputation.average_rating ?? "нет оценок"} · отзывов {reputation.review_count}
+              Репутация собеседника: {activeReputation.average_rating ?? "нет оценок"} · отзывов {activeReputation.review_count}
             </p>
           )}
           {selectedId && (() => {
@@ -338,15 +412,42 @@ function Inbox() {
           </div>
           {selectedId && (
             <>
-              <form className="review-form" onSubmit={review}>
-                <label>Оценка
-                  <select name="rating" defaultValue="5">
-                    {[5, 4, 3, 2, 1].map((rating) => <option value={rating} key={rating}>{rating}</option>)}
-                  </select>
-                </label>
-                <input name="comment" maxLength={2000} placeholder="Короткий отзыв" />
-                <button>Оставить отзыв</button>
-              </form>
+              {activeInteraction && (
+                <section className="review-form" aria-label="Статус сделки">
+                  <strong>Подтверждение сделки</strong>
+                  {activeInteraction.status === "awaiting_contact" && (
+                    <p>Отправьте сообщение, чтобы начать взаимодействие.</p>
+                  )}
+                  {activeInteraction.status === "contacted" && (
+                    <>
+                      <p>
+                        Ваше подтверждение: {activeInteraction.my_completion_confirmed ? "есть" : "нет"}.
+                        Подтверждение собеседника: {activeInteraction.counterpart_completion_confirmed ? "есть" : "нет"}.
+                      </p>
+                      {!activeInteraction.my_completion_confirmed && (
+                        <button type="button" onClick={() => void confirmCompletion()}>
+                          Подтвердить, что сделка состоялась
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {activeInteraction.status === "completed" && (
+                    <p>Обе стороны подтвердили, что сделка состоялась.</p>
+                  )}
+                </section>
+              )}
+              {activeInteraction?.can_review && (
+                <form className="review-form" onSubmit={review}>
+                  <label>Оценка
+                    <select name="rating" defaultValue="5">
+                      {[5, 4, 3, 2, 1].map((rating) => <option value={rating} key={rating}>{rating}</option>)}
+                    </select>
+                  </label>
+                  <input name="comment" maxLength={2000} placeholder="Короткий отзыв" />
+                  <button>Оставить отзыв</button>
+                </form>
+              )}
+              {activeInteraction?.review_created && <p>Вы уже оставили отзыв по этой сделке.</p>}
               <form className="message-form" onSubmit={send}>
                 <label className="sr-only" htmlFor="message-body">Сообщение</label>
                 <textarea id="message-body" name="body" maxLength={4000} required disabled={selectedIsBlocked} placeholder="Напишите сообщение…" />

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Expo Mobile Test Foundation — implementation and local verification complete.
+Confirmed Interaction and Review Integrity — implementation and verification complete.
 
 ## Completed
 
@@ -54,6 +54,10 @@ Expo Mobile Test Foundation — implementation and local verification complete.
   are implemented.
 - Expo SDK 57 phone-test client, shared runtime API contracts and LAN development
   workflow are implemented without duplicating backend business rules.
+- Explicit first-contact interaction state and immutable two-party completion
+  confirmation gate review eligibility.
+- Reviews are linked to their matching interaction by database constraints and
+  are immutable at the database layer.
 
 ## In progress
 
@@ -65,8 +69,8 @@ None.
 
 ## Next tasks
 
-- Continue the prescribed roadmap with interaction/deal-intent state and confirmed
-  reviews before expanding the mobile client into private MVP flows.
+- Continue Stage 8 with participant review replies, then dispute and moderation
+  workflows, before reputation can influence discovery.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -124,9 +128,26 @@ fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched relea
 
 ## Latest successful test run
 
-2026-08-21: full web lint, strict typecheck, 10 tests and Next.js 16.3.1
+2026-09-01: full web lint, strict typecheck, 10 tests and Next.js 16.3.1
 production build passed; Expo lint, strict typecheck, 5 tests and Android bundle
-export passed; API Ruff and 106 tests passed; migration 0020 is at head.
+export passed; API Ruff and 111 tests passed; migration 0021 is at head.
+
+## Confirmed interaction verification
+
+- Each conversation receives exactly one interaction; its first persisted message
+  records contact without claiming that a transaction occurred.
+- Buyer and seller confirmations are participant-authorized, independently stored,
+  row-locked and idempotent. Completion requires both parties.
+- Review creation before completion returns `409`; the verified runtime flow
+  produced `contacted` after the first confirmation, `completed` after the second,
+  `201` for the first review and `409` for a duplicate.
+- Migration 0021 preserved and linked all three existing local reviews. A downgrade
+  to 0020 and repeat upgrade to 0021 also preserved them.
+- PostgreSQL triggers rejected attempted mutations of both a completed interaction
+  and an existing review. Composite foreign keys prevent cross-conversation links.
+- Fresh API image build, Ruff and all 111 tests passed. API health returned 200.
+- Web lint, strict typecheck, 10 tests and production build passed.
+- Expo lint, strict typecheck, 5 tests and Android export passed unchanged.
 
 ## Expo mobile test foundation verification
 

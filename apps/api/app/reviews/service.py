@@ -7,7 +7,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.messaging.service import participant_conversation
-from app.models import Message, Review, User
+from app.models import Interaction, Review, User
 
 
 async def ensure_user_exists(db: AsyncSession, user_id: uuid.UUID) -> None:
@@ -23,13 +23,10 @@ async def create_review(
     comment: str,
 ) -> Review:
     conversation = await participant_conversation(db, conversation_id, reviewer_id)
-    participant_message_count = await db.scalar(
-        select(func.count(func.distinct(Message.sender_id))).where(
-            Message.conversation_id == conversation.id,
-            Message.sender_id.in_([conversation.buyer_id, conversation.seller_id]),
-        )
+    interaction = await db.scalar(
+        select(Interaction).where(Interaction.conversation_id == conversation.id)
     )
-    if participant_message_count != 2:
+    if interaction is None or interaction.completed_at is None:
         raise HTTPException(409, detail={"code": "interaction_not_completed"})
 
     reviewee_id = (
@@ -42,6 +39,7 @@ async def create_review(
         .values(
             id=uuid.uuid4(),
             conversation_id=conversation.id,
+            interaction_id=interaction.id,
             reviewer_id=reviewer_id,
             reviewee_id=reviewee_id,
             rating=rating,

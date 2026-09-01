@@ -29,6 +29,7 @@ from app.verification.router import router as verification_router
 from app.blocking.router import router as blocking_router
 from app.message_reports.router import router as message_reports_router
 from app.message_media.router import router as message_media_router
+from app.interactions.router import router as interactions_router
 from app.analytics.service import queue_metrics
 from app.observability import http_metrics, metrics_request_is_authorized
 from app.security import (
@@ -77,6 +78,7 @@ app.include_router(verification_router)
 app.include_router(blocking_router)
 app.include_router(message_reports_router)
 app.include_router(message_media_router)
+app.include_router(interactions_router)
 
 
 @app.middleware("http")

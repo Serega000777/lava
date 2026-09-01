@@ -10,6 +10,7 @@ from sqlalchemy.orm import aliased
 from app.models import (
     Conversation,
     ConversationMute,
+    Interaction,
     Listing,
     Message,
     MessageMedia,
@@ -69,6 +70,11 @@ async def create_conversation(
     conversation = await db.scalar(select(Conversation).where(lookup))
     if conversation is None:
         raise RuntimeError("conversation upsert failed")
+    await db.execute(
+        insert(Interaction)
+        .values(id=uuid.uuid4(), conversation_id=conversation.id)
+        .on_conflict_do_nothing(index_elements=["conversation_id"])
+    )
     if created_id:
         notification_id = uuid.uuid4()
         created_notification_id = await db.scalar(
@@ -168,6 +174,22 @@ async def send_message(
                 kind="new_message",
             )
     if created_id:
+        contacted_at = datetime.now(UTC)
+        interaction_insert = insert(Interaction).values(
+            id=uuid.uuid4(),
+            conversation_id=conversation.id,
+            contacted_at=contacted_at,
+        )
+        await db.execute(
+            interaction_insert.on_conflict_do_update(
+                index_elements=["conversation_id"],
+                set_={
+                    "contacted_at": func.coalesce(
+                        Interaction.contacted_at, interaction_insert.excluded.contacted_at
+                    )
+                },
+            )
+        )
         conversation.updated_at = datetime.now(UTC)
     await db.commit()
     return message
