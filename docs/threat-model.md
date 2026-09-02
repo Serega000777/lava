@@ -84,6 +84,12 @@ rewritten. The API returns role-relative booleans rather than either party's pri
 confirmation timestamp. Collusive confirmations remain possible and require the
 planned anomaly, dispute and moderation workflows before reputation affects search.
 
+Review replies require the authenticated reviewee and hide foreign review IDs with
+`404`. PostgreSQL independently enforces that the reply author matches the reviewee,
+allows one reply per review and rejects later text mutation. Public reply DTOs omit
+author UUIDs. Replies cannot erase, change or dilute the rating; abuse reports and
+moderator annotations remain planned as separate audit records.
+
 The Expo test client accepts only a public API origin through `EXPO_PUBLIC_API_URL`;
 this value is not a secret. Its API adapter validates response schemas, applies a
 bounded timeout and never renders server error bodies. The current shell does not

@@ -5,9 +5,10 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.messaging.service import participant_conversation
-from app.models import Interaction, Review, User
+from app.models import Interaction, Review, ReviewReply, User
 
 
 async def ensure_user_exists(db: AsyncSession, user_id: uuid.UUID) -> None:
@@ -60,24 +61,77 @@ async def create_review(
 async def public_reviews(
     db: AsyncSession, user_id: uuid.UUID, limit: int, offset: int
 ) -> list[dict[str, object]]:
+    reviewer = aliased(User)
+    responder = aliased(User)
     result = await db.execute(
         select(
             Review.id,
             Review.conversation_id,
             Review.reviewer_id,
             Review.reviewee_id,
-            User.display_name.label("reviewer_name"),
+            reviewer.display_name.label("reviewer_name"),
             Review.rating,
             Review.comment,
             Review.created_at,
+            ReviewReply.id.label("reply_id"),
+            responder.display_name.label("responder_name"),
+            ReviewReply.body.label("reply_body"),
+            ReviewReply.created_at.label("reply_created_at"),
         )
-        .join(User, User.id == Review.reviewer_id)
+        .join(reviewer, reviewer.id == Review.reviewer_id)
+        .outerjoin(ReviewReply, ReviewReply.review_id == Review.id)
+        .outerjoin(responder, responder.id == ReviewReply.author_id)
         .where(Review.reviewee_id == user_id)
         .order_by(Review.created_at.desc(), Review.id)
         .limit(limit)
         .offset(offset)
     )
-    return [dict(row) for row in result.mappings().all()]
+    reviews = []
+    for row in result.mappings().all():
+        item = dict(row)
+        reply_id = item.pop("reply_id")
+        responder_name = item.pop("responder_name")
+        reply_body = item.pop("reply_body")
+        reply_created_at = item.pop("reply_created_at")
+        item["reply"] = (
+            {
+                "responder_name": responder_name,
+                "body": reply_body,
+                "created_at": reply_created_at,
+            }
+            if reply_id is not None
+            else None
+        )
+        reviews.append(item)
+    return reviews
+
+
+async def create_review_reply(
+    db: AsyncSession, review_id: uuid.UUID, author_id: uuid.UUID, body: str
+) -> ReviewReply:
+    review = await db.scalar(
+        select(Review).where(Review.id == review_id, Review.reviewee_id == author_id)
+    )
+    if review is None:
+        raise HTTPException(404, detail={"code": "review_not_found"})
+    reply_id = await db.scalar(
+        insert(ReviewReply)
+        .values(
+            id=uuid.uuid4(),
+            review_id=review.id,
+            author_id=author_id,
+            body=body,
+        )
+        .on_conflict_do_nothing(index_elements=["review_id"])
+        .returning(ReviewReply.id)
+    )
+    if reply_id is None:
+        raise HTTPException(409, detail={"code": "review_reply_already_exists"})
+    reply = await db.scalar(select(ReviewReply).where(ReviewReply.id == reply_id))
+    if reply is None:
+        raise RuntimeError("review reply insert failed")
+    await db.commit()
+    return reply
 
 
 async def reputation(db: AsyncSession, user_id: uuid.UUID) -> tuple[Decimal | None, int]:

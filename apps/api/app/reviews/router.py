@@ -9,11 +9,35 @@ from app.reviews.schemas import (
     PublicReviewResponse,
     ReputationResponse,
     ReviewCreate,
+    ReviewReplyCreate,
+    ReviewReplyResponse,
     ReviewResponse,
 )
-from app.reviews.service import create_review, ensure_user_exists, public_reviews, reputation
+from app.reviews.service import (
+    create_review,
+    create_review_reply,
+    ensure_user_exists,
+    public_reviews,
+    reputation,
+)
 
 router = APIRouter(tags=["reviews"])
+
+
+@router.post(
+    "/reviews/{review_id}/reply",
+    response_model=ReviewReplyResponse,
+    status_code=201,
+)
+async def reply_to_review(
+    review_id: uuid.UUID,
+    data: ReviewReplyCreate,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ReviewReplyResponse:
+    return ReviewReplyResponse.model_validate(
+        await create_review_reply(db, review_id, user.id, data.body)
+    )
 
 
 @router.post(

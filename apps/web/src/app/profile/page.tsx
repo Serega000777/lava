@@ -1,16 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
 type Profile = {
+  id: string;
   display_name: string;
   phone: string;
   role: string;
   verification_level: number;
 };
 type ActiveSession = { id: string; created_at: string; expires_at: string; is_current: boolean };
+type ReviewReply = { responder_name: string; body: string; created_at: string };
+type Review = {
+  id: string;
+  reviewer_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  reply: ReviewReply | null;
+};
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const verificationLabels = [
@@ -26,12 +36,24 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [sessionMessage, setSessionMessage] = useState("");
+  const [reviews, setReviews] = useState<Review[] | null>(null);
+  const [reviewMessage, setReviewMessage] = useState("");
 
   useEffect(() => {
     fetch(`${apiUrl}/me`, { credentials: "include" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Войдите, чтобы открыть профиль");
-        setProfile(await response.json() as Profile);
+        const loadedProfile = await response.json() as Profile;
+        setProfile(loadedProfile);
+        void fetch(`${apiUrl}/users/${loadedProfile.id}/reviews`)
+          .then(async (reviewsResponse) => {
+            if (!reviewsResponse.ok) throw new Error("reviews failed");
+            setReviews(await reviewsResponse.json() as Review[]);
+          })
+          .catch(() => {
+            setReviews([]);
+            setReviewMessage("Не удалось загрузить отзывы.");
+          });
       })
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : "Ошибка загрузки");
@@ -39,7 +61,8 @@ export default function ProfilePage() {
     fetch(`${apiUrl}/auth/sessions`, { credentials: "include" })
       .then(async (response) => {
         if (response.ok) setSessions(await response.json() as ActiveSession[]);
-      });
+      })
+      .catch(() => setSessionMessage("Не удалось загрузить активные сеансы."));
   }, []);
 
   async function revoke(sessionId: string) {
@@ -60,9 +83,43 @@ export default function ProfilePage() {
     } else setSessionMessage("Не удалось завершить остальные сеансы.");
   }
 
+  async function replyToReview(event: FormEvent<HTMLFormElement>, reviewId: string) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const response = await apiFetch(`${apiUrl}/reviews/${reviewId}/reply`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: form.get("body") }),
+    });
+    if (response.status === 409) {
+      setReviewMessage("Ответ на этот отзыв уже опубликован.");
+      return;
+    }
+    if (!response.ok || !profile) {
+      setReviewMessage("Не удалось опубликовать ответ.");
+      return;
+    }
+    const reply = await response.json() as {
+      body: string;
+      created_at: string;
+    };
+    setReviews((current) => current?.map((review) => review.id === reviewId ? {
+      ...review,
+      reply: {
+        responder_name: profile.display_name,
+        body: reply.body,
+        created_at: reply.created_at,
+      },
+    } : review) ?? current);
+    setReviewMessage("Ответ опубликован.");
+    formElement.reset();
+  }
+
   return (
     <main className="auth-shell">
-      <section className="auth-card">
+      <section className="auth-card profile-card">
         <Link className="brand" href="/">Lava<span>.</span></Link>
         <p className="eyebrow">ПРОФИЛЬ</p>
         {!profile && !error && <p>Загружаем профиль…</p>}
@@ -95,6 +152,38 @@ export default function ProfilePage() {
             </ul>
             {sessions.some((item) => !item.is_current) && <button onClick={() => void revokeOthers()}>Завершить все остальные</button>}
             {sessionMessage && <p role="status">{sessionMessage}</p>}
+            <h2>Отзывы обо мне</h2>
+            {reviews === null && <p>Загружаем отзывы…</p>}
+            {reviews?.length === 0 && <p>Отзывов пока нет.</p>}
+            {reviews && reviews.length > 0 && (
+              <ul className="review-list">
+                {reviews.map((review) => (
+                  <li key={review.id}>
+                    <strong>{review.rating}/5 · {review.reviewer_name}</strong>
+                    {review.comment && <p>{review.comment}</p>}
+                    {review.reply ? (
+                      <blockquote>
+                        <strong>{review.reply.responder_name} ответил:</strong>
+                        <p>{review.reply.body}</p>
+                      </blockquote>
+                    ) : (
+                      <form onSubmit={(event) => void replyToReview(event, review.id)}>
+                        <label htmlFor={`reply-${review.id}`}>Ответ на отзыв</label>
+                        <input
+                          id={`reply-${review.id}`}
+                          name="body"
+                          minLength={1}
+                          maxLength={2000}
+                          required
+                        />
+                        <button>Опубликовать ответ</button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {reviewMessage && <p role="status">{reviewMessage}</p>}
           </>
         )}
       </section>

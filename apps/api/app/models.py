@@ -389,6 +389,7 @@ class Review(Base):
         CheckConstraint("rating BETWEEN 1 AND 5"),
         CheckConstraint("reviewer_id <> reviewee_id"),
         UniqueConstraint("conversation_id", "reviewer_id"),
+        UniqueConstraint("id", "reviewee_id", name="uq_reviews_id_reviewee"),
         ForeignKeyConstraint(
             ["interaction_id", "conversation_id"],
             ["interactions.id", "interactions.conversation_id"],
@@ -409,6 +410,30 @@ class Review(Base):
     )
     rating: Mapped[int] = mapped_column(SmallInteger)
     comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewReply(Base):
+    __tablename__ = "review_replies"
+    __table_args__ = (
+        UniqueConstraint("review_id"),
+        Index("ix_review_replies_review_id", "review_id"),
+        Index("ix_review_replies_author_id", "author_id"),
+        ForeignKeyConstraint(
+            ["review_id", "author_id"],
+            ["reviews.id", "reviews.reviewee_id"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    review_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+    )
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    body: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -149,7 +149,8 @@ function Inbox() {
 
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const body = String(form.get("body") ?? "").trim();
     const media = form.get("media");
     if (!body || !selectedId) return;
@@ -187,7 +188,7 @@ function Inbox() {
       });
       if (!mediaResponse.ok) {
         setStatus("Сообщение отправлено, но изображение загрузить не удалось.");
-        event.currentTarget.reset();
+        formElement.reset();
         return;
       }
       const attached = await mediaResponse.json() as { id: string; width: number; height: number };
@@ -195,7 +196,7 @@ function Inbox() {
         item.id === message.id ? { ...item, media: [...item.media, attached] } : item
       )));
     }
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   async function toggleBlock() {
@@ -239,7 +240,8 @@ function Inbox() {
 
   async function reportMessage(event: FormEvent<HTMLFormElement>, messageId: string) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const response = await apiFetch(`${apiUrl}/messages/${messageId}/reports`, {
       method: "POST",
       credentials: "include",
@@ -269,7 +271,8 @@ function Inbox() {
   async function review(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const reviewedConversationId = selectedId;
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const response = await apiFetch(`${apiUrl}/conversations/${reviewedConversationId}/review`, {
       method: "POST",
       credentials: "include",
@@ -293,7 +296,7 @@ function Inbox() {
         can_review: false,
         review_created: true,
       } : current);
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   async function confirmCompletion() {

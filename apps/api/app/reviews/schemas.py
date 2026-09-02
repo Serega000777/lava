@@ -15,6 +15,33 @@ class ReviewCreate(BaseModel):
         return value.strip()
 
 
+class ReviewReplyCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("body")
+    @classmethod
+    def normalize_body(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("reply body cannot be blank")
+        return value
+
+
+class ReviewReplyResponse(BaseModel):
+    id: uuid.UUID
+    review_id: uuid.UUID
+    author_id: uuid.UUID
+    body: str
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class PublicReviewReplyResponse(BaseModel):
+    responder_name: str
+    body: str
+    created_at: datetime
+
+
 class ReviewResponse(BaseModel):
     id: uuid.UUID
     conversation_id: uuid.UUID
@@ -32,6 +59,7 @@ class PublicReviewResponse(BaseModel):
     rating: int
     comment: str
     created_at: datetime
+    reply: PublicReviewReplyResponse | None
 
 
 class ReputationResponse(BaseModel):

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Confirmed Interaction and Review Integrity — implementation and verification complete.
+Immutable Review Replies — implementation and verification complete.
 
 ## Completed
 
@@ -58,6 +58,8 @@ Confirmed Interaction and Review Integrity — implementation and verification c
   confirmation gate review eligibility.
 - Reviews are linked to their matching interaction by database constraints and
   are immutable at the database layer.
+- Reviewed sellers and specialists can publish one immutable public response from
+  their profile cabinet; the database independently enforces the correct author.
 
 ## In progress
 
@@ -69,8 +71,8 @@ None.
 
 ## Next tasks
 
-- Continue Stage 8 with participant review replies, then dispute and moderation
-  workflows, before reputation can influence discovery.
+- Continue Stage 8 with review disputes and moderator annotations, then add
+  reputation abuse signals before reputation can influence discovery.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -128,9 +130,23 @@ fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched relea
 
 ## Latest successful test run
 
-2026-09-01: full web lint, strict typecheck, 10 tests and Next.js 16.3.1
+2026-09-02: full web lint, strict typecheck, 11 tests and Next.js 16.3.1
 production build passed; Expo lint, strict typecheck, 5 tests and Android bundle
-export passed; API Ruff and 111 tests passed; migration 0021 is at head.
+export passed; fresh API image, Ruff and 115 tests passed; migration 0022 is at head.
+
+## Immutable review reply verification
+
+- Only the reviewed account can publish a reply; another participant receives
+  `404` without learning private authorization state.
+- A live two-account HTTP flow returned `201` for the reviewed seller, `409` for a
+  duplicate, and nested the reply in the public review without `author_id`.
+- PostgreSQL rejected a reply whose author did not match `reviewee_id` and rejected
+  an attempted rewrite of a published reply.
+- Migration 0022 passed upgrade, downgrade and repeat-upgrade while preserving all
+  three pre-existing local reviews.
+- The profile cabinet renders received reviews, publishes a reply and replaces the
+  form with the public response. The React async form-reset regression found by the
+  test was also fixed in reply, message-send and review-submit handlers.
 
 ## Confirmed interaction verification
 
