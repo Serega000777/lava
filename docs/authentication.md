@@ -4,6 +4,15 @@ The foundation supports password registration/login and development OTP behind f
 
 Passwords use Argon2id. Phones must use E.164 form. Opaque sessions are stored as hashes and delivered through HttpOnly, SameSite=Lax cookies which become Secure in production.
 
+Password login is protected twice: the edge limiter constrains each client and
+route, while a Redis-backed account limiter aggregates failures across clients by
+a keyed HMAC phone identity. OTP keys use the same privacy boundary. After two
+failures, delays grow from 2 seconds to a
+five-minute cap and expire with the one-hour failure window. Existing and unknown
+accounts follow the same generic error path and Argon2id verification work. A
+successful login clears only the failure state it observed, preserving a failure
+that raced concurrently. Redis failure closes login with `503`.
+
 Endpoints include password and OTP login, logout, `GET/PATCH /me`, password
 recovery, and active-session management. See the generated OpenAPI document for
 the complete contract.

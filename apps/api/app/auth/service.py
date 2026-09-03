@@ -5,6 +5,13 @@ from redis.asyncio import Redis
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.abuse import (
+    auth_identity,
+    clear_password_failures,
+    password_failure_count,
+    password_retry_after,
+    record_password_failure,
+)
 from app.auth.schemas import PasswordRegisterRequest
 from app.auth.security import (
     hash_password,
@@ -15,6 +22,8 @@ from app.auth.security import (
 )
 from app.config import settings
 from app.models import PasswordCredential, Session, User
+
+DUMMY_PASSWORD_HASH = hash_password("Lava timing equalization value 2026")
 
 
 async def register_password(db: AsyncSession, data: PasswordRegisterRequest) -> User:
@@ -39,12 +48,45 @@ async def authenticate_password(db: AsyncSession, phone: str, password: str) -> 
         .where(User.phone == phone, User.is_active.is_(True))
     )
     row = result.one_or_none()
-    if not row or not verify_password(row.PasswordCredential.password_hash, password):
+    password_hash = row.PasswordCredential.password_hash if row else DUMMY_PASSWORD_HASH
+    password_is_valid = verify_password(password_hash, password)
+    if not row or not password_is_valid:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             detail={"code": "invalid_credentials", "message": "Неверный телефон или пароль"},
         )
     return row.User
+
+
+async def authenticate_password_with_delay(
+    db: AsyncSession,
+    redis: Redis,
+    phone: str,
+    password: str,
+) -> User:
+    retry_after = await password_retry_after(redis, phone)
+    if retry_after:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={"code": "account_login_delayed", "message": "Повторите попытку позже"},
+            headers={"Retry-After": str(retry_after)},
+        )
+    observed_attempts = await password_failure_count(redis, phone)
+    try:
+        user = await authenticate_password(db, phone, password)
+    except HTTPException as error:
+        if error.status_code != status.HTTP_401_UNAUTHORIZED:
+            raise
+        retry_after = await record_password_failure(redis, phone)
+        if retry_after:
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={"code": "account_login_delayed", "message": "Повторите попытку позже"},
+                headers={"Retry-After": str(retry_after)},
+            ) from error
+        raise
+    await clear_password_failures(redis, phone, observed_attempts)
+    return user
 
 
 async def create_session(db: AsyncSession, user: User) -> str:
@@ -63,7 +105,7 @@ async def create_session(db: AsyncSession, user: User) -> str:
 def otp_key(purpose: str, phone: str) -> str:
     if purpose not in {"login", "recovery"}:
         raise ValueError("unsupported OTP purpose")
-    return f"auth:otp:{purpose}:{phone}"
+    return f"auth:otp:{purpose}:{auth_identity(phone)}"
 
 
 async def request_otp(redis: Redis, phone: str, purpose: str = "login") -> str | None:

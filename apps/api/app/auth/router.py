@@ -5,6 +5,7 @@ import uuid
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +17,7 @@ from app.auth.schemas import (
 )
 from app.auth.security import hash_token
 from app.auth.service import (
-    authenticate_password, create_session, register_password, request_otp,
+    authenticate_password_with_delay, create_session, register_password, request_otp,
     reset_password_and_revoke_sessions, verify_otp,
 )
 from app.config import settings
@@ -66,7 +67,16 @@ async def password_login(
 ) -> AuthResponse:
     if not settings.password_login_enabled:
         raise HTTPException(404, detail={"code": "feature_disabled"})
-    user = await authenticate_password(db, data.phone, data.password)
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        user = await authenticate_password_with_delay(db, redis, data.phone, data.password)
+    except RedisError as error:
+        raise HTTPException(
+            503,
+            detail={"code": "security_dependency_unavailable"},
+        ) from error
+    finally:
+        await redis.aclose()
     set_session_cookie(response, await create_session(db, user))
     return AuthResponse(user=UserResponse.model_validate(user))
 

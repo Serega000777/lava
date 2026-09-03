@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Privacy-safe Reputation Abuse Signals — implementation and verification complete.
+Account-level Progressive Login Delays — implementation and verification complete.
 
 ## Completed
 
@@ -64,6 +64,8 @@ Privacy-safe Reputation Abuse Signals — implementation and verification comple
   exclude a review without rewriting evidence or automatically sanctioning users.
 - Moderator-only reputation signals aggregate explainable 24-hour activity without
   exposing reviewer identities or automatically changing rating, ranking or account state.
+- Password login applies atomic, HMAC-keyed account-level progressive delays across
+  client addresses and equalizes unknown-account password verification timing.
 
 ## In progress
 
@@ -77,6 +79,7 @@ None.
 
 - Evaluate reputation-signal precision during beta and document a fair weighting
   policy before reputation can influence discovery or organic ranking.
+- Continue Stage 10 with CI security scanning and pre-launch operational drills.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -98,9 +101,10 @@ the current API image rebuilds successfully and passes the complete verification
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
 Non-image attachments remain outside the current messaging media scope.
-`npm audit --omit=dev` reports 15 non-critical findings (10 moderate, 5 high)
+`npm audit --omit=dev` reports 16 non-critical findings (11 moderate, 5 high)
 through the current Expo CLI/Metro/Xcode dependency graph. The suggested automatic
-fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched releases.
+forced fix downgrades Expo 57 to 46 and is incompatible. The non-forced dry run
+currently fails dependency resolution; monitor Expo for compatible patched releases.
 
 ## Decisions needed from owner
 
@@ -113,7 +117,7 @@ fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched relea
 - `npm run typecheck` — passed.
 - `npm run test` — passed.
 - `npm run build` — passed.
-- `npm audit --omit=dev` — no critical findings; 15 upstream Expo toolchain
+- `npm audit --omit=dev` — no critical findings; 16 upstream Expo toolchain
   findings remain documented and cannot be safely auto-fixed.
 - `python -m ruff check apps/api` — passed.
 - `python -m pytest apps/api/tests -q` — passed.
@@ -134,10 +138,28 @@ fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched relea
 
 ## Latest successful test run
 
-2026-09-03: full web lint, strict typecheck, 11 tests and Next.js 16.3.1
+2026-09-03: full web lint, strict typecheck, 12 tests and Next.js 16.3.1
 production build passed; Expo lint, strict typecheck, 5 tests and Android export
-passed; fresh API image, Ruff and 126 tests passed. API health and readiness pass;
+passed; fresh API image, Ruff and 137 tests passed. API health and readiness pass;
 PostgreSQL remains at migration 0023 because this slice requires no schema change.
+
+## Progressive login delay verification
+
+- Redis atomically counts account failures and applies a configurable exponential
+  delay after the second failure, capped at five minutes within a one-hour window.
+- Account and OTP Redis keys use HMAC-SHA-256 identities; raw phone numbers and
+  passwords are absent. Production rejects local, example and short key secrets.
+- Existing and unknown accounts both perform Argon2id verification and receive the
+  same generic credential response, reducing registration-state timing leakage.
+- Active delay bypasses password work and returns bounded `Retry-After`; Redis
+  failure closes the route with `503`.
+- Successful authentication uses compare-and-delete so it cannot clear a failure
+  recorded concurrently after password verification began.
+- The live flow returned `401, 401, 429, 429, 200`, then confirmed that both account
+  limiter keys were absent. Temporary test accounts were removed.
+- Fresh API image, Ruff and all 137 backend tests passed. Web lint, strict typecheck,
+  12 tests and production build passed; Expo lint, strict typecheck, 5 tests and
+  Android export passed unchanged.
 
 ## Reputation abuse signal verification
 

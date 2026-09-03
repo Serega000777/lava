@@ -26,6 +26,14 @@ sessions. Public/session DTOs never expose cookie tokens or hashes. Production
 hardening still requires an approved SMS provider, SIM-swap response policy and
 alerts for repeated recovery attempts.
 
+Password spraying and distributed account targeting are constrained by both the
+client/route edge limit and an account-level progressive Redis delay. Limiter and
+OTP keys contain only a keyed HMAC-derived phone identity. Existing and unknown accounts execute
+Argon2id verification, receive the same credential error and accumulate the same
+failure state. Atomic delay updates and compare-and-delete cleanup prevent common
+concurrency bypasses. Redis failure closes login; provider-side OTP throttling is
+still required before production SMS is enabled.
+
 Background notification delivery uses a transactional outbox, bounded retry
 counts and stale-lock recovery. Worker logs exclude payloads; Redis Stream keys
 hash user identifiers and stream entries omit message bodies and profile data.
