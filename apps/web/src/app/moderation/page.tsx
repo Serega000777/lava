@@ -36,6 +36,16 @@ type MessageReport = {
   reported_user_id: string;
   media: Array<{ id: string; width: number; height: number }>;
 };
+type ReviewDispute = {
+  id: string;
+  review_id: string;
+  reason_code: string;
+  details: string;
+  rating: number;
+  review_comment: string;
+  reviewer_name: string;
+  reviewee_name: string;
+};
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -44,6 +54,7 @@ export default function ModerationPage() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [messageReports, setMessageReports] = useState<MessageReport[]>([]);
+  const [reviewDisputes, setReviewDisputes] = useState<ReviewDispute[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -54,19 +65,21 @@ export default function ModerationPage() {
         fetch(`${apiUrl}/moderation/complaints`, { credentials: "include", signal }),
         fetch(`${apiUrl}/moderation/appeals`, { credentials: "include", signal }),
         fetch(`${apiUrl}/moderation/message-reports`, { credentials: "include", signal }),
+        fetch(`${apiUrl}/moderation/review-disputes`, { credentials: "include", signal }),
       ]);
       const failed = responses.find((response) => !response.ok);
       if (failed) {
         setMessage(failed.status === 403 ? "Недостаточно прав" : "Войдите как модератор");
         return;
       }
-      const [caseItems, complaintItems, appealItems, messageReportItems] = await Promise.all(
+      const [caseItems, complaintItems, appealItems, messageReportItems, reviewDisputeItems] = await Promise.all(
         responses.map((response) => response.json()),
       );
       setCases(caseItems as Case[]);
       setComplaints(complaintItems as Complaint[]);
       setAppeals(appealItems as Appeal[]);
       setMessageReports(messageReportItems as MessageReport[]);
+      setReviewDisputes(reviewDisputeItems as ReviewDispute[]);
     } catch (error: unknown) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setMessage("Ошибка загрузки очереди");
@@ -155,6 +168,25 @@ export default function ModerationPage() {
     if (response.ok) await load();
   }
 
+  async function decideReviewDispute(
+    disputeId: string,
+    outcome: "keep" | "exclude",
+    disputeReason: string,
+  ) {
+    const response = await apiFetch(`${apiUrl}/moderation/review-disputes/${disputeId}/decision`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        outcome,
+        reason_code: outcome === "keep" ? "complies" : disputeReason,
+        comment: "",
+      }),
+    });
+    setMessage(response.ok ? "Спор по отзыву обработан" : "Не удалось обработать спор");
+    if (response.ok) await load();
+  }
+
   return (
     <main className="auth-shell">
       <section className="auth-card moderation-card">
@@ -239,6 +271,29 @@ export default function ModerationPage() {
                 </button>
                 <button className="ghost" onClick={() => void decideMessageReport(item.id, "dismissed")}>
                   Нарушения нет
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <h2>Споры по отзывам</h2>
+        {!loading && reviewDisputes.length === 0 && <p>Открытых споров по отзывам нет.</p>}
+        <ul className="moderation-list">
+          {reviewDisputes.map((item) => (
+            <li key={item.id}>
+              <div>
+                <strong>{item.rating}/5 · {item.reason_code}</strong>
+                <small>{item.reviewer_name} → {item.reviewee_name}</small>
+                <p>{item.review_comment}</p>
+                {item.details && <p>{item.details}</p>}
+              </div>
+              <div className="moderation-actions">
+                <button className="danger" onClick={() => void decideReviewDispute(item.id, "exclude", item.reason_code)}>
+                  Исключить отзыв
+                </button>
+                <button className="ghost" onClick={() => void decideReviewDispute(item.id, "keep", item.reason_code)}>
+                  Оставить отзыв
                 </button>
               </div>
             </li>

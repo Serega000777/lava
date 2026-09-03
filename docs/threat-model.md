@@ -90,6 +90,14 @@ allows one reply per review and rejects later text mutation. Public reply DTOs o
 author UUIDs. Replies cannot erase, change or dilute the rating; abuse reports and
 moderator annotations remain planned as separate audit records.
 
+Review disputes are limited to the reviewee by both service authorization and a
+composite database foreign key. Filing does not hide criticism. Permission-gated
+moderators receive the minimum review evidence needed to decide, and a moderator
+who authored or received the review is rejected. Row locks and unique constraints
+prevent double decisions. Exclusion affects public display and aggregates without
+deleting evidence or triggering an automatic user sanction. Collusion and repeated
+cross-account reputation manipulation still require aggregate anomaly signals.
+
 The Expo test client accepts only a public API origin through `EXPO_PUBLIC_API_URL`;
 this value is not a secret. Its API adapter validates response schemas, applies a
 bounded timeout and never renders server error bodies. The current shell does not

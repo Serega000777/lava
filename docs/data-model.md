@@ -19,6 +19,11 @@ Migration 0022 adds one optional immutable `review_replies` row per review. A
 composite foreign key guarantees that the stored reply author is the reviewee;
 indexes support review lookup and owner-scoped cabinet access.
 
+Migration 0023 adds one reviewee-owned `review_disputes` row per review and one
+append-only `review_moderation_decisions` row per dispute. Public visibility and
+reputation inclusion are derived from an `exclude` decision; review rows themselves
+remain unchanged.
+
 Migration 0012 adds append-only `verification_decisions`. Sensitive identity
 evidence is intentionally excluded from the MVP database.
 Migration 0013 enforces decision immutability with a database trigger.

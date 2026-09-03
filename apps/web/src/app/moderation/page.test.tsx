@@ -9,6 +9,18 @@ describe("ModerationPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string) => ({
       ok: true,
       json: async () => {
+        if (url.includes("/review-disputes")) {
+          return [{
+            id: "review-dispute-1",
+            review_id: "review-1",
+            reason_code: "abusive",
+            details: "В тексте есть оскорбление",
+            rating: 1,
+            review_comment: "Грубый текст",
+            reviewer_name: "Покупатель",
+            reviewee_name: "Продавец",
+          }];
+        }
         if (url.includes("/message-reports")) {
           return [{
             id: "message-report-1",
@@ -61,6 +73,9 @@ describe("ModerationPage", () => {
     expect(screen.getByRole("img", { name: "Вложение из жалобы" }))
       .toHaveAttribute("src", "http://localhost:8000/moderation/message-media/evidence-1");
     expect(screen.getByRole("heading", { name: "Апелляции" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Споры по отзывам" })).toBeInTheDocument();
+    expect(screen.getByText("В тексте есть оскорбление")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Исключить отзыв" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Возможна координация");
   });
 });

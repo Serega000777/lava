@@ -3,25 +3,92 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import current_user, get_db
+from app.auth.dependencies import current_user, get_db, require_permission
 from app.models import User
 from app.reviews.schemas import (
     PublicReviewResponse,
+    ReceivedReviewResponse,
     ReputationResponse,
     ReviewCreate,
     ReviewReplyCreate,
     ReviewReplyResponse,
     ReviewResponse,
+    ReviewDisputeCreate,
+    ReviewDisputeDecisionCreate,
+    ReviewDisputeDecisionResponse,
+    ReviewDisputeResponse,
+    ModerationReviewDisputeResponse,
 )
 from app.reviews.service import (
     create_review,
     create_review_reply,
+    create_review_dispute,
+    decide_review_dispute,
     ensure_user_exists,
     public_reviews,
+    received_reviews,
     reputation,
+    list_review_disputes,
 )
 
 router = APIRouter(tags=["reviews"])
+
+
+@router.get("/reviews/received", response_model=list[ReceivedReviewResponse])
+async def my_received_reviews(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict[str, object]]:
+    return await received_reviews(db, user.id, limit, offset)
+
+
+@router.post(
+    "/reviews/{review_id}/dispute",
+    response_model=ReviewDisputeResponse,
+    status_code=201,
+)
+async def dispute_review(
+    review_id: uuid.UUID,
+    data: ReviewDisputeCreate,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ReviewDisputeResponse:
+    return ReviewDisputeResponse.model_validate(
+        await create_review_dispute(
+            db, review_id, user.id, data.reason_code, data.details
+        )
+    )
+
+
+@router.get(
+    "/moderation/review-disputes",
+    response_model=list[ModerationReviewDisputeResponse],
+)
+async def moderation_review_disputes(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=10_000),
+    _: User = Depends(require_permission("moderation:read")),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict[str, object]]:
+    return await list_review_disputes(db, limit, offset)
+
+
+@router.post(
+    "/moderation/review-disputes/{dispute_id}/decision",
+    response_model=ReviewDisputeDecisionResponse,
+    status_code=201,
+)
+async def review_dispute_decision(
+    dispute_id: uuid.UUID,
+    data: ReviewDisputeDecisionCreate,
+    user: User = Depends(require_permission("moderation:decide")),
+    db: AsyncSession = Depends(get_db),
+) -> ReviewDisputeDecisionResponse:
+    return ReviewDisputeDecisionResponse.model_validate(
+        await decide_review_dispute(db, dispute_id, user.id, data)
+    )
 
 
 @router.post(

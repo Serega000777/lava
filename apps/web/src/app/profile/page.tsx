@@ -20,6 +20,9 @@ type Review = {
   comment: string;
   created_at: string;
   reply: ReviewReply | null;
+  dispute_status: "open" | "keep" | "exclude" | null;
+  dispute_resolution_reason: string | null;
+  dispute_resolution_comment: string | null;
 };
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -45,7 +48,7 @@ export default function ProfilePage() {
         if (!response.ok) throw new Error("Войдите, чтобы открыть профиль");
         const loadedProfile = await response.json() as Profile;
         setProfile(loadedProfile);
-        void fetch(`${apiUrl}/users/${loadedProfile.id}/reviews`)
+        void fetch(`${apiUrl}/reviews/received`, { credentials: "include" })
           .then(async (reviewsResponse) => {
             if (!reviewsResponse.ok) throw new Error("reviews failed");
             setReviews(await reviewsResponse.json() as Review[]);
@@ -117,6 +120,34 @@ export default function ProfilePage() {
     formElement.reset();
   }
 
+  async function disputeReview(event: FormEvent<HTMLFormElement>, reviewId: string) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const response = await apiFetch(`${apiUrl}/reviews/${reviewId}/dispute`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reason_code: form.get("reason_code"),
+        details: form.get("details"),
+      }),
+    });
+    if (response.status === 409) {
+      setReviewMessage("Спор по этому отзыву уже открыт.");
+      return;
+    }
+    if (!response.ok) {
+      setReviewMessage("Не удалось открыть спор по отзыву.");
+      return;
+    }
+    setReviews((current) => current?.map((review) => review.id === reviewId
+      ? { ...review, dispute_status: "open" }
+      : review) ?? current);
+    setReviewMessage("Спор отправлен на независимую модерацию.");
+    formElement.reset();
+  }
+
   return (
     <main className="auth-shell">
       <section className="auth-card profile-card">
@@ -177,6 +208,36 @@ export default function ProfilePage() {
                           required
                         />
                         <button>Опубликовать ответ</button>
+                      </form>
+                    )}
+                    {review.dispute_status ? (
+                      <div>
+                        <p>
+                          Статус спора: {{
+                            open: "на рассмотрении",
+                            keep: "отзыв оставлен",
+                            exclude: "отзыв исключён из публичной репутации",
+                          }[review.dispute_status]}
+                        </p>
+                        {review.dispute_resolution_reason && (
+                          <p>Причина решения: {review.dispute_resolution_reason}</p>
+                        )}
+                        {review.dispute_resolution_comment && (
+                          <p>{review.dispute_resolution_comment}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <form onSubmit={(event) => void disputeReview(event, review.id)}>
+                        <label htmlFor={`dispute-reason-${review.id}`}>Оспорить отзыв</label>
+                        <select id={`dispute-reason-${review.id}`} name="reason_code" defaultValue="other">
+                          <option value="transaction_not_completed">Сделка не состоялась</option>
+                          <option value="abusive">Оскорбление</option>
+                          <option value="personal_data">Персональные данные</option>
+                          <option value="fraudulent">Недостоверный отзыв</option>
+                          <option value="other">Другая причина</option>
+                        </select>
+                        <input name="details" maxLength={4000} placeholder="Пояснение модератору" />
+                        <button className="ghost">Открыть спор</button>
                       </form>
                     )}
                   </li>

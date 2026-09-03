@@ -437,6 +437,57 @@ class ReviewReply(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class ReviewDispute(Base):
+    __tablename__ = "review_disputes"
+    __table_args__ = (
+        CheckConstraint(
+            "reason_code IN ('transaction_not_completed', 'abusive', "
+            "'personal_data', 'fraudulent', 'other')"
+        ),
+        UniqueConstraint("review_id"),
+        ForeignKeyConstraint(
+            ["review_id", "opened_by"],
+            ["reviews.id", "reviews.reviewee_id"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    review_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    opened_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reason_code: Mapped[str] = mapped_column(String(32))
+    details: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewModerationDecision(Base):
+    __tablename__ = "review_moderation_decisions"
+    __table_args__ = (
+        CheckConstraint("outcome IN ('keep', 'exclude')"),
+        CheckConstraint(
+            "reason_code IN ('complies', 'insufficient_evidence', 'abusive', "
+            "'personal_data', 'fraudulent', 'transaction_not_completed', 'other')"
+        ),
+        UniqueConstraint("dispute_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dispute_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("review_disputes.id", ondelete="CASCADE"),
+        index=True,
+    )
+    moderator_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
+    outcome: Mapped[str] = mapped_column(String(16))
+    reason_code: Mapped[str] = mapped_column(String(32))
+    comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CreditAccount(Base):
     __tablename__ = "credit_accounts"
     __table_args__ = (CheckConstraint("balance >= 0"),)

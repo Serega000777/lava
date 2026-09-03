@@ -14,7 +14,7 @@ describe("ProfilePage", () => {
         expires_at: "2026-08-31T10:00:00Z", is_current: true,
         }],
       };
-      if (url.includes("/reviews")) return { ok: true, json: async () => [] };
+      if (url.endsWith("/reviews/received")) return { ok: true, json: async () => [] };
       return {
         ok: true,
         json: async () => ({
@@ -41,11 +41,12 @@ describe("ProfilePage", () => {
         }),
       };
       if (url.includes("/auth/sessions")) return { ok: true, json: async () => [] };
-      if (url.endsWith("/users/seller-1/reviews")) return {
+      if (url.endsWith("/reviews/received")) return {
         ok: true,
         json: async () => [{
           id: "review-1", reviewer_name: "Покупатель", rating: 5,
-          comment: "Всё хорошо", created_at: "2026-09-02T10:00:00Z", reply: null,
+          comment: "Всё хорошо", created_at: "2026-09-02T10:00:00Z",
+          reply: null, dispute_status: null,
         }],
       };
       if (url.endsWith("/auth/csrf")) return {
@@ -56,6 +57,11 @@ describe("ProfilePage", () => {
         ok: true,
         status: 201,
         json: async () => ({ body: "Спасибо", created_at: "2026-09-02T11:00:00Z" }),
+      };
+      if (url.endsWith("/reviews/review-1/dispute") && init?.method === "POST") return {
+        ok: true,
+        status: 201,
+        json: async () => ({ id: "dispute-1" }),
       };
       throw new Error(`unexpected request: ${url}`);
     }));
@@ -68,5 +74,13 @@ describe("ProfilePage", () => {
     expect(await screen.findByText("Ответ опубликован.")).toBeInTheDocument();
     expect(screen.getByText("Спасибо")).toBeInTheDocument();
     expect(screen.queryByLabelText("Ответ на отзыв")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText("Пояснение модератору"), {
+      target: { value: "Нужна проверка" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Открыть спор" }));
+    expect(await screen.findByText("Спор отправлен на независимую модерацию."))
+      .toBeInTheDocument();
+    expect(screen.getByText(/Статус спора: на рассмотрении/)).toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Immutable Review Replies — implementation and verification complete.
+Review Disputes and Independent Moderation — implementation and verification complete.
 
 ## Completed
 
@@ -60,6 +60,8 @@ Immutable Review Replies — implementation and verification complete.
   are immutable at the database layer.
 - Reviewed sellers and specialists can publish one immutable public response from
   their profile cabinet; the database independently enforces the correct author.
+- Reviewees can open one immutable dispute; independent moderators can keep or
+  exclude a review without rewriting evidence or automatically sanctioning users.
 
 ## In progress
 
@@ -71,8 +73,8 @@ None.
 
 ## Next tasks
 
-- Continue Stage 8 with review disputes and moderator annotations, then add
-  reputation abuse signals before reputation can influence discovery.
+- Continue Stage 8 with privacy-safe reputation abuse signals before reputation
+  can influence discovery or organic ranking.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -130,9 +132,23 @@ fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched relea
 
 ## Latest successful test run
 
-2026-09-02: full web lint, strict typecheck, 11 tests and Next.js 16.3.1
-production build passed; Expo lint, strict typecheck, 5 tests and Android bundle
-export passed; fresh API image, Ruff and 115 tests passed; migration 0022 is at head.
+2026-09-03: full web lint, strict typecheck, 11 tests and Next.js 16.3.1
+production build passed; Expo lint, strict typecheck, 5 tests and Android export
+passed; fresh API image, Ruff and 121 tests passed; migration 0023 passed upgrade,
+downgrade and repeat upgrade.
+
+## Review dispute verification
+
+- A pending dispute leaves its review public. The reviewed account sees `open` in
+  its private received-review history and the moderator sees it in the open queue.
+- A moderator who participated in the review receives `409`; an independent
+  moderator can decide once and a repeat returns `409`.
+- A live `exclude` decision produced an empty public review response and reputation
+  count zero while private history retained status `exclude`.
+- PostgreSQL rejected a dispute owned by anyone except `reviewee_id` and rejected
+  attempted mutation of both dispute evidence and the moderation decision.
+- Migration 0023 passed upgrade, downgrade and repeat upgrade while preserving all
+  three pre-existing local reviews. Runtime test accounts and records were removed.
 
 ## Immutable review reply verification
 

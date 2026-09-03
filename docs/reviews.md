@@ -6,6 +6,11 @@
 - `POST /conversations/{id}/review` creates one immutable participant review after
   both parties have confirmed completion.
 - `POST /reviews/{id}/reply` creates the reviewed party's single immutable reply.
+- `GET /reviews/received` returns the authenticated reviewee's private review and
+  dispute state, including moderator-excluded history.
+- `POST /reviews/{id}/dispute` opens one reviewee-owned dispute.
+- `GET /moderation/review-disputes` returns the permission-gated open queue.
+- `POST /moderation/review-disputes/{id}/decision` records one independent decision.
 - `GET /users/{id}/reviews` returns bounded newest-first public reviews.
 - `GET /users/{id}/reputation` returns the average rating and review count.
 
@@ -28,5 +33,13 @@ characters. A composite foreign key enforces the author rule in PostgreSQL. Publ
 responses nest the responder's display name, text and time without author,
 conversation or interaction UUIDs. The profile cabinet lets the reviewed user
 reply and then replaces the form with the published immutable response.
+
+A dispute is visible privately as `open`, `keep` or `exclude`, together with the
+bounded resolution reason and optional moderator explanation but not moderator ID.
+Opening it does not hide the review. A moderator who did not participate in the
+interaction may record one final decision. `exclude` removes the review from public responses and rating
+aggregation, but the original review, reply, dispute and decision remain separate
+audit records. No dispute or single moderation decision automatically sanctions an
+account.
 
 Before reviews influence discovery ranking, the platform needs anomaly detection, complaint handling and a documented weighting policy.
