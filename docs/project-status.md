@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Review Disputes and Independent Moderation — implementation and verification complete.
+Privacy-safe Reputation Abuse Signals — implementation and verification complete.
 
 ## Completed
 
@@ -62,6 +62,8 @@ Review Disputes and Independent Moderation — implementation and verification c
   their profile cabinet; the database independently enforces the correct author.
 - Reviewees can open one immutable dispute; independent moderators can keep or
   exclude a review without rewriting evidence or automatically sanctioning users.
+- Moderator-only reputation signals aggregate explainable 24-hour activity without
+  exposing reviewer identities or automatically changing rating, ranking or account state.
 
 ## In progress
 
@@ -73,8 +75,8 @@ None.
 
 ## Next tasks
 
-- Continue Stage 8 with privacy-safe reputation abuse signals before reputation
-  can influence discovery or organic ranking.
+- Evaluate reputation-signal precision during beta and document a fair weighting
+  policy before reputation can influence discovery or organic ranking.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -134,8 +136,24 @@ fix downgrades Expo 57 to 53 and is incompatible; monitor Expo for patched relea
 
 2026-09-03: full web lint, strict typecheck, 11 tests and Next.js 16.3.1
 production build passed; Expo lint, strict typecheck, 5 tests and Android export
-passed; fresh API image, Ruff and 121 tests passed; migration 0023 passed upgrade,
-downgrade and repeat upgrade.
+passed; fresh API image, Ruff and 126 tests passed. API health and readiness pass;
+PostgreSQL remains at migration 0023 because this slice requires no schema change.
+
+## Reputation abuse signal verification
+
+- The rolling 24-hour assessor requires at least two fixed, explainable indicators
+  and does not flag a five-review mixed-rating series on one weak indicator alone.
+- Moderator-excluded reviews are filtered from both candidate and detail queries.
+- The permission-gated response exposes the reviewed account and aggregate counts,
+  but no reviewer IDs, phone, network, device or precise account-creation data.
+- A live three-review series from three new accounts produced the expected
+  `new_account_cluster` and `rating_concentration` warning; anonymous access returned
+  `401`, and all temporary runtime records were removed.
+- The warning is presented as a manual-review aid and cannot modify reputation,
+  discovery ranking or account state.
+- Fresh API image, Ruff and all 126 backend tests passed. Web lint, strict typecheck,
+  11 tests and production build passed; Expo lint, strict typecheck, 5 tests and
+  Android export passed unchanged.
 
 ## Review dispute verification
 

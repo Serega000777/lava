@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import current_user, get_db, require_permission
 from app.models import User
 from app.reviews.schemas import (
+    ModerationReviewDisputeResponse,
     PublicReviewResponse,
     ReceivedReviewResponse,
     ReputationResponse,
+    ReputationSignalResponse,
     ReviewCreate,
     ReviewReplyCreate,
     ReviewReplyResponse,
@@ -17,8 +19,8 @@ from app.reviews.schemas import (
     ReviewDisputeDecisionCreate,
     ReviewDisputeDecisionResponse,
     ReviewDisputeResponse,
-    ModerationReviewDisputeResponse,
 )
+from app.reviews.signals import list_reputation_signals
 from app.reviews.service import (
     create_review,
     create_review_reply,
@@ -32,6 +34,19 @@ from app.reviews.service import (
 )
 
 router = APIRouter(tags=["reviews"])
+
+
+@router.get(
+    "/moderation/reputation-signals",
+    response_model=list[ReputationSignalResponse],
+)
+async def moderation_reputation_signals(
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0, le=999),
+    _: User = Depends(require_permission("moderation:read")),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict[str, object]]:
+    return await list_reputation_signals(db, limit=limit, offset=offset)
 
 
 @router.get("/reviews/received", response_model=list[ReceivedReviewResponse])

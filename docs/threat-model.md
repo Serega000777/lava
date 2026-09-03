@@ -96,7 +96,13 @@ moderators receive the minimum review evidence needed to decide, and a moderator
 who authored or received the review is rejected. Row locks and unique constraints
 prevent double decisions. Exclusion affects public display and aggregates without
 deleting evidence or triggering an automatic user sanction. Collusion and repeated
-cross-account reputation manipulation still require aggregate anomaly signals.
+cross-account reputation manipulation are highlighted by a separate moderator-only
+24-hour aggregate signal. It uses review counts, account age, rating concentration
+and repeat relationships, ignores moderator-excluded reviews and requires at least
+two indicators. Reviewer identities, phone, device and network data are not exposed
+in the signal response. The warning cannot alter ratings, ranking or account state;
+false positives require manual review. Privacy-reviewed device or network
+correlation remains out of scope.
 
 The Expo test client accepts only a public API origin through `EXPO_PUBLIC_API_URL`;
 this value is not a secret. Its API adapter validates response schemas, applies a

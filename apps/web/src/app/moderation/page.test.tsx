@@ -9,6 +9,21 @@ describe("ModerationPage", () => {
     vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string) => ({
       ok: true,
       json: async () => {
+        if (url.includes("/reputation-signals")) {
+          return [{
+            user_id: "seller-1",
+            display_name: "Проверяемый магазин",
+            detected: true,
+            window_hours: 24,
+            review_count: 5,
+            distinct_reviewer_count: 3,
+            new_account_reviewer_count: 3,
+            dominant_rating: 5,
+            dominant_rating_count: 5,
+            repeat_review_count: 2,
+            indicators: ["review_burst", "new_account_cluster", "rating_concentration"],
+          }];
+        }
         if (url.includes("/review-disputes")) {
           return [{
             id: "review-dispute-1",
@@ -74,6 +89,10 @@ describe("ModerationPage", () => {
       .toHaveAttribute("src", "http://localhost:8000/moderation/message-media/evidence-1");
     expect(screen.getByRole("heading", { name: "Апелляции" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Споры по отзывам" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Сигналы репутации" })).toBeInTheDocument();
+    expect(screen.getByText("Проверяемый магазин")).toBeInTheDocument();
+    expect(screen.getByText(/не влияют на рейтинг/)).toBeInTheDocument();
+    expect(screen.getByText(/всплеск отзывов, группа новых аккаунтов/)).toBeInTheDocument();
     expect(screen.getByText("В тексте есть оскорбление")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Исключить отзыв" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Возможна координация");

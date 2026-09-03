@@ -46,6 +46,26 @@ type ReviewDispute = {
   reviewer_name: string;
   reviewee_name: string;
 };
+type ReputationSignal = {
+  user_id: string;
+  display_name: string;
+  detected: boolean;
+  window_hours: number;
+  review_count: number;
+  distinct_reviewer_count: number;
+  new_account_reviewer_count: number;
+  dominant_rating: number | null;
+  dominant_rating_count: number;
+  repeat_review_count: number;
+  indicators: string[];
+};
+
+const reputationIndicatorLabels: Record<string, string> = {
+  review_burst: "всплеск отзывов",
+  new_account_cluster: "группа новых аккаунтов",
+  rating_concentration: "одинаковые оценки",
+  repeat_reviewer_relationships: "повторные связи между участниками",
+};
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -55,6 +75,7 @@ export default function ModerationPage() {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [messageReports, setMessageReports] = useState<MessageReport[]>([]);
   const [reviewDisputes, setReviewDisputes] = useState<ReviewDispute[]>([]);
+  const [reputationSignals, setReputationSignals] = useState<ReputationSignal[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -66,20 +87,27 @@ export default function ModerationPage() {
         fetch(`${apiUrl}/moderation/appeals`, { credentials: "include", signal }),
         fetch(`${apiUrl}/moderation/message-reports`, { credentials: "include", signal }),
         fetch(`${apiUrl}/moderation/review-disputes`, { credentials: "include", signal }),
+        fetch(`${apiUrl}/moderation/reputation-signals`, { credentials: "include", signal }),
       ]);
       const failed = responses.find((response) => !response.ok);
       if (failed) {
         setMessage(failed.status === 403 ? "Недостаточно прав" : "Войдите как модератор");
         return;
       }
-      const [caseItems, complaintItems, appealItems, messageReportItems, reviewDisputeItems] = await Promise.all(
-        responses.map((response) => response.json()),
-      );
+      const [
+        caseItems,
+        complaintItems,
+        appealItems,
+        messageReportItems,
+        reviewDisputeItems,
+        reputationSignalItems,
+      ] = await Promise.all(responses.map((response) => response.json()));
       setCases(caseItems as Case[]);
       setComplaints(complaintItems as Complaint[]);
       setAppeals(appealItems as Appeal[]);
       setMessageReports(messageReportItems as MessageReport[]);
       setReviewDisputes(reviewDisputeItems as ReviewDispute[]);
+      setReputationSignals(reputationSignalItems as ReputationSignal[]);
     } catch (error: unknown) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setMessage("Ошибка загрузки очереди");
@@ -210,6 +238,36 @@ export default function ModerationPage() {
                 <button className="ghost" onClick={() => void decideCase(item.id, "changes_requested")}>
                   На исправление
                 </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <h2>Сигналы репутации</h2>
+        <p>
+          Это подсказки для ручной проверки. Они не влияют на рейтинг и не применяют санкции.
+        </p>
+        {!loading && reputationSignals.length === 0 && <p>Подозрительных серий отзывов нет.</p>}
+        <ul className="moderation-list">
+          {reputationSignals.map((item) => (
+            <li key={item.user_id}>
+              <div>
+                <strong>{item.display_name}</strong>
+                <small>Пользователь {item.user_id}</small>
+                <p>
+                  {item.review_count} отзывов за {item.window_hours} ч. · {item.distinct_reviewer_count}
+                  {" "}авторов · преобладающая оценка {item.dominant_rating ?? "—"}
+                  {" "}({item.dominant_rating_count})
+                </p>
+                <p>
+                  Новых авторов: {item.new_account_reviewer_count} · повторных связей:
+                  {" "}{item.repeat_review_count}
+                </p>
+                <p>
+                  Индикаторы: {item.indicators
+                    .map((indicator) => reputationIndicatorLabels[indicator] ?? indicator)
+                    .join(", ")}
+                </p>
               </div>
             </li>
           ))}

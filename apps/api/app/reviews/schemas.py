@@ -138,3 +138,17 @@ class ReputationResponse(BaseModel):
     user_id: uuid.UUID
     average_rating: Decimal | None
     review_count: int
+
+
+class ReputationSignalResponse(BaseModel):
+    user_id: uuid.UUID
+    display_name: str
+    detected: bool
+    window_hours: int
+    review_count: int
+    distinct_reviewer_count: int
+    new_account_reviewer_count: int
+    dominant_rating: int | None
+    dominant_rating_count: int
+    repeat_review_count: int
+    indicators: list[str]

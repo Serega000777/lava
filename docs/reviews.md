@@ -11,6 +11,8 @@
 - `POST /reviews/{id}/dispute` opens one reviewee-owned dispute.
 - `GET /moderation/review-disputes` returns the permission-gated open queue.
 - `POST /moderation/review-disputes/{id}/decision` records one independent decision.
+- `GET /moderation/reputation-signals` returns bounded, aggregated advisory
+  signals to users with `moderation:read` permission.
 - `GET /users/{id}/reviews` returns bounded newest-first public reviews.
 - `GET /users/{id}/reputation` returns the average rating and review count.
 
@@ -42,4 +44,14 @@ aggregation, but the original review, reply, dispute and decision remain separat
 audit records. No dispute or single moderation decision automatically sanctions an
 account.
 
-Before reviews influence discovery ranking, the platform needs anomaly detection, complaint handling and a documented weighting policy.
+A rolling 24-hour reputation signal requires at least two explainable indicators:
+a five-review burst, three recently created distinct reviewer accounts, a 90%
+rating concentration across at least three reviews, or two repeat reviews from
+existing reviewer relationships. Moderator-excluded reviews do not contribute.
+The response identifies only the reviewed account and aggregated counts; it omits
+reviewer IDs, phone, device and network data. It never changes reputation, ranking
+or account state automatically. The moderation UI explicitly presents it as a
+manual-review aid.
+
+Before reviews influence discovery ranking, the platform still needs a documented
+weighting policy and beta evaluation of signal precision and fairness.
