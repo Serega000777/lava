@@ -1,5 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  test: { environment: "jsdom", setupFiles: ["./vitest.setup.ts"] },
+  test: {
+    environment: "jsdom",
+    maxWorkers: 1,
+    setupFiles: ["./vitest.setup.ts"],
+  },
 });

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Account-level Progressive Login Delays — implementation and verification complete.
+Continuous Security Scanning — implementation and verification in progress.
 
 ## Completed
 
@@ -11,7 +11,7 @@ Account-level Progressive Login Delays — implementation and verification compl
 - Monorepo source, local infrastructure, initial migration, seed and UI prepared.
 - Frontend lint, strict typecheck, unit test and production build pass.
 - API Ruff lint and health test pass.
-- Web runtime dependencies were updated to Next.js 16.3.1 and React 19.2.3;
+- Web runtime dependencies were updated to Next.js 16.3.4 and React 19.2.3;
   current known npm advisories are isolated to the Expo build toolchain.
 - Docker Compose configuration validates.
 - Full Docker stack starts successfully; API and dependencies report healthy.
@@ -66,6 +66,10 @@ Account-level Progressive Login Delays — implementation and verification compl
   exposing reviewer identities or automatically changing rating, ranking or account state.
 - Password login applies atomic, HMAC-keyed account-level progressive delays across
   client addresses and equalizes unknown-account password verification timing.
+- Dedicated CI security checks cover deployed dependencies, CodeQL, committed
+  secrets/misconfiguration and fixable HIGH/CRITICAL production-image findings.
+- API, Web and Worker production images install current OS security updates and
+  run with non-root identities; API runtime excludes test/development tools.
 
 ## In progress
 
@@ -79,7 +83,7 @@ None.
 
 - Evaluate reputation-signal precision during beta and document a fair weighting
   policy before reputation can influence discovery or organic ranking.
-- Continue Stage 10 with CI security scanning and pre-launch operational drills.
+- Continue Stage 10 with authenticated staging DAST and pre-launch operational drills.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -101,7 +105,7 @@ the current API image rebuilds successfully and passes the complete verification
 
 Alert routing, dashboards and metrics retention remain deployment-specific.
 Non-image attachments remain outside the current messaging media scope.
-`npm audit --omit=dev` reports 16 non-critical findings (11 moderate, 5 high)
+`npm audit --omit=dev` reports 16 non-critical findings (10 moderate, 6 high)
 through the current Expo CLI/Metro/Xcode dependency graph. The suggested automatic
 forced fix downgrades Expo 57 to 46 and is incompatible. The non-forced dry run
 currently fails dependency resolution; monitor Expo for compatible patched releases.
@@ -138,10 +142,26 @@ currently fails dependency resolution; monitor Expo for compatible patched relea
 
 ## Latest successful test run
 
-2026-09-03: full web lint, strict typecheck, 12 tests and Next.js 16.3.1
-production build passed; Expo lint, strict typecheck, 5 tests and Android export
-passed; fresh API image, Ruff and 137 tests passed. API health and readiness pass;
-PostgreSQL remains at migration 0023 because this slice requires no schema change.
+2026-09-11: API test image, Ruff and all 137 tests passed after dependency
+upgrades; pip-audit reported no known API vulnerabilities. Web production
+dependencies were upgraded to Next.js 16.3.4 and audit with the HIGH threshold
+reported zero vulnerabilities. Full Web/Expo regression and production-image
+scans are pending the clean GitHub runner; PostgreSQL remains at migration 0023
+because this slice requires no schema change.
+
+## Continuous security scanning verification
+
+- Pull requests, `main`, weekly schedules and manual runs now invoke a dedicated
+  security workflow.
+- The Web production dependency graph has zero known npm vulnerabilities; the
+  complete non-development graph retains 10 moderate and 6 high findings only
+  through the Expo/Metro/Xcode phone-build toolchain and has no critical findings.
+- API dependency upgrades leave pip-audit with no known vulnerabilities; the API
+  test image passed Ruff and all 137 tests and its runtime omits pytest.
+- Local Trivy scans found no repository secrets/misconfigurations and no fixable
+  HIGH/CRITICAL findings in rebuilt API and Worker production images.
+- The remaining clean-run verification is delegated to the pull-request workflow,
+  including CodeQL and all three independently rebuilt production images.
 
 ## Progressive login delay verification
 

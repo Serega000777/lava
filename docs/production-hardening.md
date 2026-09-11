@@ -13,6 +13,11 @@
 - Hidden, strong-token-protected, low-cardinality OpenMetrics export.
 - Docker build context excludes Git metadata, local dependencies, caches and all
   `.env` variants so they cannot be copied into build transfers accidentally.
+- Production containers install current OS security updates, run as non-root
+  users and exclude API test tooling and unused Web package managers.
+- CI audits deployed dependencies, runs CodeQL for Python and TypeScript, scans
+  committed files for secrets/misconfiguration and blocks fixable HIGH/CRITICAL
+  findings in all production images.
 - Web CSP, frame blocking and restricted browser capabilities.
 
 ## Deployment requirements
@@ -37,5 +42,5 @@
 - Put provider-side OTP limits behind the Redis edge limit when the approved SMS
   provider is selected.
 - Add edge/WAF volumetric protection and trusted-proxy client-IP handling.
-- Run dependency, container, SAST and DAST scanning in CI.
+- Add authenticated DAST against an isolated staging environment.
 - Complete backup-restore, incident-response and session-revocation drills.

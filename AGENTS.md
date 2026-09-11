@@ -21,6 +21,8 @@ Keep business logic out of React components and HTTP handlers. External services
 - `npm run mobile`: start Expo in LAN mode for a physical phone.
 - `npm run check:mobile`: lint, typecheck, test and export the Android bundle.
 - `python -m pytest apps/api/tests`: run API tests.
+- `docker build --target test -f apps/api/Dockerfile -t lava-api:test .`: build the API test image.
+- `docker run --rm lava-api:test sh -lc "python -m ruff check app tests && python -m pytest tests -q"`: validate API code in the test image.
 - `docker compose run --rm api alembic upgrade head`: apply migrations.
 - `docker compose run --rm api python -m app.seed`: seed categories.
 

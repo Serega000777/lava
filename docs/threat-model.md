@@ -7,10 +7,17 @@ Origin validation, fail-closed authentication rate limits in Redis, authorizatio
 at service boundaries, CSP and browser security headers, immutable audit/credit
 ledgers, idempotency keys and payload-free structured request logging.
 
-Planned controls include MIME/signature validation, EXIF removal, isolated image
-processing, allowlisted outbound integrations, nonce-based CSP, edge volumetric
-protection, automated security scanning and verified backup/incident-response
+Planned controls include allowlisted outbound integrations, nonce-based CSP, edge
+volumetric protection, authenticated staging DAST and verified backup/incident-response
 procedures. See `production-hardening.md` for deployment requirements.
+
+The CI security workflow audits deployed dependencies, runs CodeQL across Python
+and TypeScript, detects committed secrets and configuration defects, and scans all
+production images for fixable HIGH/CRITICAL vulnerabilities. External actions are
+pinned to immutable commit SHAs. Runtime images install available OS security
+updates, use non-root identities and omit unnecessary development tooling and Web
+package managers. Scheduled weekly scans detect advisories disclosed after merge;
+unfixed upstream findings still require monitoring and risk review.
 
 Complaint abuse is constrained by authentication, self-report prevention,
 bounded reason codes, idempotency keys and atomic per-account/per-target Redis
