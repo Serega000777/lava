@@ -5,7 +5,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY apps/api/pyproject.toml .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --retries 5 --timeout 60 "."
+    pip install --retries 5 --timeout 60 "setuptools==84.0.0" \
+    && pip install --retries 5 --timeout 60 "."
 COPY apps/api .
 
 FROM base AS test

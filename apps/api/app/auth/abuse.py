@@ -34,6 +34,9 @@ return 0
 def auth_identity(phone: str) -> str:
     return hmac.new(
         settings.rate_limit_key_secret.get_secret_value().encode(),
+        # This is keyed pseudonymization of a phone identifier for Redis keys;
+        # passwords never reach this function.
+        # codeql[py/weak-sensitive-data-hashing]
         phone.encode(),
         hashlib.sha256,
     ).hexdigest()
