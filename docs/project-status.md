@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Continuous Security Scanning — implementation and verification in progress.
+Continuous Security Scanning — implementation and verification complete.
 
 ## Completed
 
@@ -143,12 +143,12 @@ currently fails dependency resolution; monitor Expo for compatible patched relea
 
 ## Latest successful test run
 
-2026-09-11: API test image, Ruff and all 137 tests passed after dependency
-upgrades; pip-audit reported no known API vulnerabilities. Web production
-dependencies were upgraded to Next.js 16.3.4 and audit with the HIGH threshold
-reported zero vulnerabilities. Full Web/Expo regression and production-image
-scans are pending the clean GitHub runner; PostgreSQL remains at migration 0023
-because this slice requires no schema change.
+2026-09-11: clean GitHub runners passed Web lint, strict typecheck, all 12 tests
+and the Next.js 16.3.4 production build; Expo lint, strict typecheck, all 5 tests
+and Android export; API Ruff and all 137 tests; dependency audits; CodeQL for
+Python and JavaScript/TypeScript; repository secret/configuration scanning; and
+HIGH/CRITICAL scans of all three production images. PostgreSQL remains at
+migration 0023 because this slice requires no schema change.
 
 ## Continuous security scanning verification
 
@@ -159,10 +159,13 @@ because this slice requires no schema change.
   through the Expo/Metro/Xcode phone-build toolchain and has no critical findings.
 - API dependency upgrades leave pip-audit with no known vulnerabilities; the API
   test image passed Ruff and all 137 tests and its runtime omits pytest.
-- Local Trivy scans found no repository secrets/misconfigurations and no fixable
-  HIGH/CRITICAL findings in rebuilt API and Worker production images.
-- The remaining clean-run verification is delegated to the pull-request workflow,
-  including CodeQL and all three independently rebuilt production images.
+- Clean-run Trivy scans found no repository secrets/misconfigurations and no
+  fixable HIGH/CRITICAL findings in independently rebuilt API, Web and Worker
+  production images.
+- CodeQL passed for Python and JavaScript/TypeScript. One Python result that
+  conflated the password and phone fields of the same request model was audited
+  and dismissed as a documented false positive: the flagged HMAC pseudonymizes a
+  phone identifier for Redis keys, while passwords are handled only by Argon2id.
 
 ## Progressive login delay verification
 

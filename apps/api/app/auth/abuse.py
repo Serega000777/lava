@@ -36,7 +36,6 @@ def auth_identity(phone: str) -> str:
     phone_identifier = phone.encode()
     # This HMAC pseudonymizes a phone identifier for Redis keys; passwords never
     # reach this function, so password-hashing work factors do not apply.
-    # codeql[py/weak-sensitive-data-hashing]
     return hmac.new(secret, phone_identifier, hashlib.sha256).hexdigest()
 
 
