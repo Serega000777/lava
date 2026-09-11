@@ -36,8 +36,7 @@ def auth_identity(phone: str) -> str:
         settings.rate_limit_key_secret.get_secret_value().encode(),
         # This is keyed pseudonymization of a phone identifier for Redis keys;
         # passwords never reach this function.
-        # codeql[py/weak-sensitive-data-hashing]
-        phone.encode(),
+        phone.encode(),  # lgtm[py/weak-sensitive-data-hashing]
         hashlib.sha256,
     ).hexdigest()
 

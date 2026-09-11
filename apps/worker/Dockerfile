@@ -5,7 +5,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY apps/worker/requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --retries 5 --timeout 60 "setuptools==84.0.0" \
+    python -m pip install --retries 5 --timeout 60 \
+      "pip==26.2.1" "setuptools==84.0.0" \
     && pip install --retries 5 --timeout 60 -r requirements.txt
 RUN useradd --create-home --uid 10001 lava
 COPY --chown=lava:lava apps/api/app ./app
