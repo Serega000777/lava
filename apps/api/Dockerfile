@@ -15,6 +15,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --retries 5 --timeout 60 ".[dev]"
 
 FROM base AS runtime
+RUN pip uninstall --yes setuptools \
+    && pip uninstall --yes pip
 RUN useradd --create-home --uid 10001 lava
 USER lava
 EXPOSE 8000

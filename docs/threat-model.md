@@ -15,8 +15,8 @@ The CI security workflow audits deployed dependencies, runs CodeQL across Python
 and TypeScript, detects committed secrets and configuration defects, and scans all
 production images for fixable HIGH/CRITICAL vulnerabilities. External actions are
 pinned to immutable commit SHAs. Runtime images install available OS security
-updates, use non-root identities and omit unnecessary development tooling and Web
-package managers. Scheduled weekly scans detect advisories disclosed after merge;
+updates, use non-root identities and omit unnecessary development tooling and
+Python/Web package managers. Scheduled weekly scans detect advisories disclosed after merge;
 unfixed upstream findings still require monitoring and risk review.
 
 Complaint abuse is constrained by authentication, self-report prevention,

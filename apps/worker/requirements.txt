@@ -1,5 +1,4 @@
 asyncpg==0.31.0
-msgpack==1.2.2
 pydantic-settings==2.15.0
 redis==7.1.0
 sqlalchemy==2.0.44

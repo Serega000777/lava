@@ -16,8 +16,9 @@ known HIGH findings are confined to the non-deployed Expo development toolchain;
 the separately audited web production workspace fails at HIGH.
 
 Production images install current operating-system security updates, run as
-non-root users and omit development/test tooling. The Web runtime also removes
-unused package managers, reducing both attack surface and transitive advisories.
+non-root users and omit development/test tooling. Runtime images also remove
+unused Python or Web package managers, reducing both attack surface and transitive
+advisories.
 `ignore-unfixed` avoids blocking a release on findings for which the upstream OS
 has no remediation, but no project-level vulnerability exceptions are added.
 DAST and operational recovery drills remain separate pre-launch controls.

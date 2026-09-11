@@ -14,7 +14,7 @@
 - Docker build context excludes Git metadata, local dependencies, caches and all
   `.env` variants so they cannot be copied into build transfers accidentally.
 - Production containers install current OS security updates, run as non-root
-  users and exclude API test tooling and unused Web package managers.
+  users and exclude API test tooling plus unused Python/Web package managers.
 - CI audits deployed dependencies, runs CodeQL for Python and TypeScript, scans
   committed files for secrets/misconfiguration and blocks fixable HIGH/CRITICAL
   findings in all production images.

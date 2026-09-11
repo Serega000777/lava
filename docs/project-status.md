@@ -69,7 +69,8 @@ Continuous Security Scanning — implementation and verification in progress.
 - Dedicated CI security checks cover deployed dependencies, CodeQL, committed
   secrets/misconfiguration and fixable HIGH/CRITICAL production-image findings.
 - API, Web and Worker production images install current OS security updates and
-  run with non-root identities; API runtime excludes test/development tools.
+  run with non-root identities; runtimes exclude test/development tooling and
+  unused Python/Web package managers.
 
 ## In progress
 

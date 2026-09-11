@@ -8,6 +8,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --retries 5 --timeout 60 \
       "pip==26.2.1" "setuptools==84.0.0" \
     && pip install --retries 5 --timeout 60 -r requirements.txt
+RUN pip uninstall --yes setuptools \
+    && pip uninstall --yes pip
 RUN useradd --create-home --uid 10001 lava
 COPY --chown=lava:lava apps/api/app ./app
 COPY --chown=lava:lava apps/worker/worker.py ./worker.py
