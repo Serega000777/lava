@@ -32,13 +32,12 @@ return 0
 
 
 def auth_identity(phone: str) -> str:
-    return hmac.new(
-        settings.rate_limit_key_secret.get_secret_value().encode(),
-        # This is keyed pseudonymization of a phone identifier for Redis keys;
-        # passwords never reach this function.
-        phone.encode(),  # lgtm[py/weak-sensitive-data-hashing]
-        hashlib.sha256,
-    ).hexdigest()
+    secret = settings.rate_limit_key_secret.get_secret_value().encode()
+    phone_identifier = phone.encode()
+    # This HMAC pseudonymizes a phone identifier for Redis keys; passwords never
+    # reach this function, so password-hashing work factors do not apply.
+    # codeql[py/weak-sensitive-data-hashing]
+    return hmac.new(secret, phone_identifier, hashlib.sha256).hexdigest()
 
 
 def password_failure_keys(phone: str) -> tuple[str, str]:
