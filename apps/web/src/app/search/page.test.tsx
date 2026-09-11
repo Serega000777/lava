@@ -24,6 +24,9 @@ describe("SearchPage", () => {
           description: "После обслуживания",
           price: "25000.00",
           city: "Москва",
+          seller_id: "seller-1",
+          seller_name: "ООО Север",
+          seller_trust_badge: "Проверенная компания",
           attributes: {},
           created_at: "2026-07-27T00:00:00Z",
         }],
@@ -36,6 +39,7 @@ describe("SearchPage", () => {
     expect(await screen.findByText("Городской велосипед")).toBeInTheDocument();
     expect(screen.getByText("25 000 ₽")).toBeInTheDocument();
     expect(screen.getByText("Найдено: 1")).toBeInTheDocument();
+    expect(screen.getByText("Проверенная компания")).toBeInTheDocument();
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("q=%D0%B2%D0%B5%D0%BB%D0%BE%D1%81%D0%B8%D0%BF%D0%B5%D0%B4"),
     ));

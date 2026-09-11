@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,7 @@ from app.models import (
     Listing,
     Message,
     ModerationCase,
+    OutboxTask,
     Review,
     User,
 )
@@ -83,3 +85,37 @@ async def admin_metrics(db: AsyncSession) -> dict[str, int]:
         )
     ).mappings().one()
     return {key: int(value) for key, value in row.items()}
+
+
+async def queue_metrics(
+    db: AsyncSession, heartbeat_timestamp: int | None
+) -> dict[str, int | bool | None]:
+    row = (
+        await db.execute(
+            select(
+                *[
+                    select(func.count(OutboxTask.id))
+                    .where(OutboxTask.status == status)
+                    .scalar_subquery()
+                    .label(status)
+                    for status in ("pending", "processing", "failed", "completed")
+                ],
+                select(func.min(OutboxTask.created_at))
+                .where(OutboxTask.status == "pending")
+                .scalar_subquery()
+                .label("oldest_pending_at"),
+            )
+        )
+    ).mappings().one()
+    now = datetime.now(UTC)
+    oldest = row["oldest_pending_at"]
+    heartbeat_age = max(0, int(now.timestamp()) - heartbeat_timestamp) if heartbeat_timestamp else None
+    return {
+        "pending": int(row["pending"]),
+        "processing": int(row["processing"]),
+        "failed": int(row["failed"]),
+        "completed": int(row["completed"]),
+        "oldest_pending_seconds": max(0, int((now - oldest).total_seconds())) if oldest else None,
+        "worker_healthy": heartbeat_age is not None and heartbeat_age <= 30,
+        "heartbeat_age_seconds": heartbeat_age,
+    }

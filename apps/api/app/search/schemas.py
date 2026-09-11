@@ -31,6 +31,10 @@ class PublicListingResponse(BaseModel):
     city: str
     attributes: dict[str, object]
     ai_generated_fields: list[str]
+    cover_image_url: str | None = None
+    seller_id: uuid.UUID | None = None
+    seller_name: str | None = None
+    seller_trust_badge: str | None = None
     created_at: datetime
     model_config = {"from_attributes": True}
 

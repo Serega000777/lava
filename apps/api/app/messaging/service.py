@@ -2,12 +2,23 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import case, or_, select
+from sqlalchemy import case, delete, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.models import Conversation, Listing, Message, Notification, User
+from app.models import (
+    Conversation,
+    ConversationMute,
+    Interaction,
+    Listing,
+    Message,
+    MessageMedia,
+    Notification,
+    User,
+)
+from app.queueing.service import enqueue_notification_created
+from app.blocking.service import ensure_messaging_allowed
 
 
 async def participant_conversation(
@@ -34,6 +45,7 @@ async def create_conversation(
         raise HTTPException(404, detail={"code": "listing_not_found"})
     if listing.owner_id == user_id:
         raise HTTPException(409, detail={"code": "cannot_message_self"})
+    await ensure_messaging_allowed(db, user_id, listing.owner_id)
 
     conversation_id = uuid.uuid4()
     created_id = await db.scalar(
@@ -58,18 +70,32 @@ async def create_conversation(
     conversation = await db.scalar(select(Conversation).where(lookup))
     if conversation is None:
         raise RuntimeError("conversation upsert failed")
+    await db.execute(
+        insert(Interaction)
+        .values(id=uuid.uuid4(), conversation_id=conversation.id)
+        .on_conflict_do_nothing(index_elements=["conversation_id"])
+    )
     if created_id:
-        await db.execute(
+        notification_id = uuid.uuid4()
+        created_notification_id = await db.scalar(
             insert(Notification)
             .values(
-                id=uuid.uuid4(),
+                id=notification_id,
                 user_id=listing.owner_id,
                 kind="new_conversation",
                 source_key=f"conversation:{conversation.id}",
                 conversation_id=conversation.id,
             )
             .on_conflict_do_nothing(index_elements=["user_id", "source_key"])
+            .returning(Notification.id)
         )
+        if created_notification_id:
+            await enqueue_notification_created(
+                db,
+                notification_id=created_notification_id,
+                user_id=listing.owner_id,
+                kind="new_conversation",
+            )
     await db.commit()
     return conversation
 
@@ -81,6 +107,10 @@ async def send_message(
     client_message_id: uuid.UUID,
     body: str,
 ) -> Message:
+    recipient_id = (
+        conversation.seller_id if sender_id == conversation.buyer_id else conversation.buyer_id
+    )
+    await ensure_messaging_allowed(db, sender_id, recipient_id)
     message_id = uuid.uuid4()
     created_id = await db.scalar(
         insert(Message)
@@ -110,20 +140,55 @@ async def send_message(
         raise HTTPException(409, detail={"code": "client_message_id_reused"})
     if not created_id and message.body != body:
         raise HTTPException(409, detail={"code": "client_message_payload_changed"})
+    recipient_muted = False
     if created_id:
-        recipient_id = (
-            conversation.seller_id if sender_id == conversation.buyer_id else conversation.buyer_id
+        recipient_muted = bool(
+            await db.scalar(
+                select(
+                    exists().where(
+                        ConversationMute.user_id == recipient_id,
+                        ConversationMute.conversation_id == conversation.id,
+                    )
+                )
+            )
         )
-        await db.execute(
+    if created_id and not recipient_muted:
+        notification_id = uuid.uuid4()
+        created_notification_id = await db.scalar(
             insert(Notification)
             .values(
-                id=uuid.uuid4(),
+                id=notification_id,
                 user_id=recipient_id,
                 kind="new_message",
                 source_key=f"message:{message.id}",
                 conversation_id=conversation.id,
             )
             .on_conflict_do_nothing(index_elements=["user_id", "source_key"])
+            .returning(Notification.id)
+        )
+        if created_notification_id:
+            await enqueue_notification_created(
+                db,
+                notification_id=created_notification_id,
+                user_id=recipient_id,
+                kind="new_message",
+            )
+    if created_id:
+        contacted_at = datetime.now(UTC)
+        interaction_insert = insert(Interaction).values(
+            id=uuid.uuid4(),
+            conversation_id=conversation.id,
+            contacted_at=contacted_at,
+        )
+        await db.execute(
+            interaction_insert.on_conflict_do_update(
+                index_elements=["conversation_id"],
+                set_={
+                    "contacted_at": func.coalesce(
+                        Interaction.contacted_at, interaction_insert.excluded.contacted_at
+                    )
+                },
+            )
         )
         conversation.updated_at = datetime.now(UTC)
     await db.commit()
@@ -152,6 +217,21 @@ async def list_conversations(
                 (Conversation.buyer_id == user_id, seller.display_name),
                 else_=buyer.display_name,
             ).label("counterpart_name"),
+            exists()
+            .where(
+                ConversationMute.user_id == user_id,
+                ConversationMute.conversation_id == Conversation.id,
+            )
+            .label("is_muted"),
+            select(func.count(Message.id))
+            .where(
+                Message.conversation_id == Conversation.id,
+                Message.sender_id != user_id,
+                Message.read_at.is_(None),
+            )
+            .correlate(Conversation)
+            .scalar_subquery()
+            .label("unread_count"),
         )
         .join(Listing, Listing.id == Conversation.listing_id)
         .join(buyer, buyer.id == Conversation.buyer_id)
@@ -164,16 +244,145 @@ async def list_conversations(
     return [dict(row) for row in result.mappings().all()]
 
 
+async def mute_conversation(
+    db: AsyncSession, conversation_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    await participant_conversation(db, conversation_id, user_id)
+    await db.execute(
+        insert(ConversationMute)
+        .values(user_id=user_id, conversation_id=conversation_id)
+        .on_conflict_do_nothing(index_elements=["user_id", "conversation_id"])
+    )
+    await db.commit()
+
+
+async def unmute_conversation(
+    db: AsyncSession, conversation_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    await participant_conversation(db, conversation_id, user_id)
+    await db.execute(
+        delete(ConversationMute).where(
+            ConversationMute.user_id == user_id,
+            ConversationMute.conversation_id == conversation_id,
+        )
+    )
+    await db.commit()
+
+
 async def list_messages(
     db: AsyncSession, conversation_id: uuid.UUID, limit: int, offset: int
-) -> list[Message]:
-    return list((await db.scalars(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(Message.created_at.asc(), Message.id)
-        .limit(limit)
-        .offset(offset)
-    )).all())
+) -> list[dict[str, object]]:
+    messages = list(
+        (
+            await db.scalars(
+                select(Message)
+                .where(Message.conversation_id == conversation_id)
+                .order_by(Message.created_at.asc(), Message.id)
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+    )
+    if not messages:
+        return []
+    media = list(
+        (
+            await db.scalars(
+                select(MessageMedia)
+                .where(MessageMedia.message_id.in_([message.id for message in messages]))
+                .order_by(MessageMedia.message_id, MessageMedia.position)
+            )
+        ).all()
+    )
+    media_by_message: dict[uuid.UUID, list[MessageMedia]] = {}
+    for item in media:
+        media_by_message.setdefault(item.message_id, []).append(item)
+    return [
+        {
+            **{column.name: getattr(message, column.name) for column in Message.__table__.columns},
+            "media": media_by_message.get(message.id, []),
+        }
+        for message in messages
+    ]
+
+
+async def mark_conversation_read(
+    db: AsyncSession,
+    conversation: Conversation,
+    user_id: uuid.UUID,
+) -> dict[str, object]:
+    await db.execute(
+        select(Conversation.id)
+        .where(Conversation.id == conversation.id)
+        .with_for_update()
+    )
+    read_at = datetime.now(UTC)
+    unread_ids = list(
+        (
+            await db.scalars(
+                update(Message)
+                .where(
+                    Message.conversation_id == conversation.id,
+                    Message.sender_id != user_id,
+                    Message.read_at.is_(None),
+                )
+                .values(
+                    read_at=read_at,
+                    delivered_at=func.coalesce(Message.delivered_at, read_at),
+                )
+                .returning(Message.id)
+            )
+        ).all()
+    )
+    notification_ids = list(
+        (
+            await db.scalars(
+                update(Notification)
+                .where(
+                    Notification.user_id == user_id,
+                    Notification.conversation_id == conversation.id,
+                    Notification.read_at.is_(None),
+                )
+                .values(read_at=read_at)
+                .returning(Notification.id)
+            )
+        ).all()
+    )
+    if not unread_ids and not notification_ids:
+        await db.rollback()
+        return {"read_count": 0, "read_at": None}
+    await db.commit()
+    return {
+        "read_count": len(unread_ids),
+        "read_at": read_at if unread_ids else None,
+    }
+
+
+async def mark_conversation_delivered(
+    db: AsyncSession,
+    conversation: Conversation,
+    user_id: uuid.UUID,
+) -> dict[str, object]:
+    delivered_at = datetime.now(UTC)
+    delivered_ids = list(
+        (
+            await db.scalars(
+                update(Message)
+                .where(
+                    Message.conversation_id == conversation.id,
+                    Message.sender_id != user_id,
+                    Message.delivered_at.is_(None),
+                )
+                .values(delivered_at=delivered_at)
+                .returning(Message.id)
+            )
+        ).all()
+    )
+    if not delivered_ids:
+        await db.rollback()
+        return {"delivered_count": 0, "delivered_at": None}
+    await db.commit()
+    return {"delivered_count": len(delivered_ids), "delivered_at": delivered_at}
 
 
 async def list_notifications(

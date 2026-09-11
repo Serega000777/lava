@@ -1,0 +1,31 @@
+{
+  "name": "@lava/mobile",
+  "private": true,
+  "version": "0.1.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --lan",
+    "android": "expo start --android --lan",
+    "ios": "expo start --ios --lan",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "export:android": "expo export --platform android --output-dir dist",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run export:android"
+  },
+  "dependencies": {
+    "@lava/api-contracts": "0.1.0",
+    "expo": "~57.0.15",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.2",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "eslint": "9.39.1",
+    "eslint-config-expo": "~57.0.1",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}

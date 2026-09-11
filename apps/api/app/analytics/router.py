@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, Query
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analytics.schemas import AdminMetrics, SellerListingMetrics
-from app.analytics.service import admin_metrics, seller_metrics
+from app.analytics.schemas import AdminMetrics, QueueMetrics, SellerListingMetrics
+from app.analytics.service import admin_metrics, queue_metrics, seller_metrics
 from app.auth.dependencies import current_user, get_db, require_permission
 from app.models import User
+from app.config import settings
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -25,3 +28,20 @@ async def admin(
     db: AsyncSession = Depends(get_db),
 ):
     return await admin_metrics(db)
+
+
+@router.get("/admin/queue", response_model=QueueMetrics)
+async def admin_queue(
+    _: User = Depends(require_permission("analytics:admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    heartbeat: int | None = None
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        value = await redis.get("lava:worker:heartbeat")
+        heartbeat = int(value) if value is not None else None
+    except (RedisError, ValueError):
+        heartbeat = None
+    finally:
+        await redis.aclose()
+    return await queue_metrics(db, heartbeat)

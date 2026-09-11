@@ -8,6 +8,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Numeric,
     SmallInteger,
@@ -76,6 +77,29 @@ class Session(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class VerificationDecision(Base):
+    __tablename__ = "verification_decisions"
+    __table_args__ = (
+        CheckConstraint("previous_level BETWEEN 0 AND 4"),
+        CheckConstraint("new_level BETWEEN 0 AND 4"),
+        CheckConstraint("previous_level <> new_level"),
+        CheckConstraint("source IN ('phone_otp', 'admin_review')"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    source: Mapped[str] = mapped_column(String(32))
+    previous_level: Mapped[int] = mapped_column(SmallInteger)
+    new_level: Mapped[int] = mapped_column(SmallInteger)
+    reason_code: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CategoryAttribute(Base):
     __tablename__ = "category_attributes"
     __table_args__ = (
@@ -120,6 +144,43 @@ class Listing(Base):
     )
 
 
+class UserBlock(Base):
+    __tablename__ = "user_blocks"
+    __table_args__ = (
+        CheckConstraint("blocker_id <> blocked_id"),
+    )
+
+    blocker_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    blocked_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ListingMedia(Base):
+    __tablename__ = "listing_media"
+    __table_args__ = (
+        CheckConstraint("position BETWEEN 0 AND 9"),
+        CheckConstraint("size_bytes > 0"),
+        UniqueConstraint("listing_id", "position"),
+        UniqueConstraint("object_key"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    listing_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), index=True
+    )
+    object_key: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column()
+    width: Mapped[int] = mapped_column()
+    height: Mapped[int] = mapped_column()
+    position: Mapped[int] = mapped_column(SmallInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Favorite(Base):
     __tablename__ = "favorites"
 
@@ -157,6 +218,51 @@ class Conversation(Base):
     )
 
 
+class Interaction(Base):
+    __tablename__ = "interactions"
+    __table_args__ = (
+        UniqueConstraint("conversation_id"),
+        UniqueConstraint("id", "conversation_id"),
+        CheckConstraint(
+            "(completed_at IS NOT NULL) = "
+            "(buyer_confirmed_at IS NOT NULL AND seller_confirmed_at IS NOT NULL)"
+        ),
+        CheckConstraint(
+            "(buyer_confirmed_at IS NULL AND seller_confirmed_at IS NULL) "
+            "OR contacted_at IS NOT NULL"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE")
+    )
+    contacted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    buyer_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    seller_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ConversationMute(Base):
+    __tablename__ = "conversation_mutes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (
@@ -172,6 +278,30 @@ class Message(Base):
     )
     client_message_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MessageMedia(Base):
+    __tablename__ = "message_media"
+    __table_args__ = (
+        CheckConstraint("position BETWEEN 0 AND 2"),
+        CheckConstraint("size_bytes > 0"),
+        UniqueConstraint("message_id", "position"),
+        UniqueConstraint("object_key"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+    object_key: Mapped[str] = mapped_column(String(255))
+    content_type: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column()
+    width: Mapped[int] = mapped_column()
+    height: Mapped[int] = mapped_column()
+    position: Mapped[int] = mapped_column(SmallInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -197,18 +327,81 @@ class Notification(Base):
     )
 
 
+class OutboxTask(Base):
+    __tablename__ = "outbox_tasks"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'processing', 'completed', 'failed')"),
+        UniqueConstraint("topic", "source_key"),
+        Index("ix_outbox_tasks_dispatch", "status", "available_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    topic: Mapped[str] = mapped_column(String(64))
+    source_key: Mapped[str] = mapped_column(String(128))
+    payload: Mapped[dict[str, object]] = mapped_column(JSON)
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    attempts: Mapped[int] = mapped_column(default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class MessageReport(Base):
+    __tablename__ = "message_reports"
+    __table_args__ = (
+        CheckConstraint("reporter_id <> reported_user_id"),
+        CheckConstraint("status IN ('open', 'resolved', 'dismissed')"),
+        CheckConstraint(
+            "reason_code IN ('spam', 'fraud', 'harassment', 'prohibited_content', 'other')"
+        ),
+        UniqueConstraint("reporter_id", "client_request_id"),
+        UniqueConstraint("reporter_id", "message_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    message_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("messages.id", ondelete="CASCADE"), index=True
+    )
+    reporter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reported_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    client_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    reason_code: Mapped[str] = mapped_column(String(32))
+    details: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    resolution_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    resolution_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Review(Base):
     __tablename__ = "reviews"
     __table_args__ = (
         CheckConstraint("rating BETWEEN 1 AND 5"),
         CheckConstraint("reviewer_id <> reviewee_id"),
         UniqueConstraint("conversation_id", "reviewer_id"),
+        UniqueConstraint("id", "reviewee_id", name="uq_reviews_id_reviewee"),
+        ForeignKeyConstraint(
+            ["interaction_id", "conversation_id"],
+            ["interactions.id", "interactions.conversation_id"],
+            ondelete="CASCADE",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE")
     )
+    interaction_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
     reviewer_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
@@ -216,6 +409,81 @@ class Review(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     rating: Mapped[int] = mapped_column(SmallInteger)
+    comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewReply(Base):
+    __tablename__ = "review_replies"
+    __table_args__ = (
+        UniqueConstraint("review_id"),
+        Index("ix_review_replies_review_id", "review_id"),
+        Index("ix_review_replies_author_id", "author_id"),
+        ForeignKeyConstraint(
+            ["review_id", "author_id"],
+            ["reviews.id", "reviews.reviewee_id"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    review_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+    )
+    author_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
+    )
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewDispute(Base):
+    __tablename__ = "review_disputes"
+    __table_args__ = (
+        CheckConstraint(
+            "reason_code IN ('transaction_not_completed', 'abusive', "
+            "'personal_data', 'fraudulent', 'other')"
+        ),
+        UniqueConstraint("review_id"),
+        ForeignKeyConstraint(
+            ["review_id", "opened_by"],
+            ["reviews.id", "reviews.reviewee_id"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    review_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    opened_by: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reason_code: Mapped[str] = mapped_column(String(32))
+    details: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReviewModerationDecision(Base):
+    __tablename__ = "review_moderation_decisions"
+    __table_args__ = (
+        CheckConstraint("outcome IN ('keep', 'exclude')"),
+        CheckConstraint(
+            "reason_code IN ('complies', 'insufficient_evidence', 'abusive', "
+            "'personal_data', 'fraudulent', 'transaction_not_completed', 'other')"
+        ),
+        UniqueConstraint("dispute_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    dispute_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("review_disputes.id", ondelete="CASCADE"),
+        index=True,
+    )
+    moderator_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), index=True
+    )
+    outcome: Mapped[str] = mapped_column(String(16))
+    reason_code: Mapped[str] = mapped_column(String(32))
     comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -319,3 +587,64 @@ class ModerationDecision(Base):
     reason_code: Mapped[str] = mapped_column(String(64))
     comment: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+
+
+class Complaint(Base):
+    __tablename__ = "complaints"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'resolved', 'dismissed')"),
+        CheckConstraint(
+            "reason_code IN ('fraud', 'prohibited_item', 'duplicate', "
+            "'misleading_content', 'wrong_category', 'other')"
+        ),
+        CheckConstraint("reporter_id <> listing_owner_id"),
+        UniqueConstraint("reporter_id", "client_request_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    listing_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("listings.id", ondelete="CASCADE"), index=True
+    )
+    listing_owner_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reporter_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    client_request_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
+    reason_code: Mapped[str] = mapped_column(String(64))
+    details: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    resolution_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    resolution_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ModerationAppeal(Base):
+    __tablename__ = "moderation_appeals"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'upheld', 'overturned')"),
+        UniqueConstraint("case_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("moderation_cases.id", ondelete="CASCADE")
+    )
+    appellant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    reason: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(24), default="open", index=True)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    resolution_comment: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

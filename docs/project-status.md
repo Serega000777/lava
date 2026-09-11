@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Analytics and Production Hardening — verified and ready for review.
+Continuous Security Scanning — implementation and verification complete.
 
 ## Completed
 
@@ -11,7 +11,8 @@ Analytics and Production Hardening — verified and ready for review.
 - Monorepo source, local infrastructure, initial migration, seed and UI prepared.
 - Frontend lint, strict typecheck, unit test and production build pass.
 - API Ruff lint and health test pass.
-- npm production/development dependency audit reports zero known vulnerabilities.
+- Web runtime dependencies were updated to Next.js 16.3.4 and React 19.2.3;
+  current known npm advisories are isolated to the Expo build toolchain.
 - Docker Compose configuration validates.
 - Full Docker stack starts successfully; API and dependencies report healthy.
 - Initial Alembic migration applies and the idempotent seed creates cars, goods and services.
@@ -33,6 +34,43 @@ Analytics and Production Hardening — verified and ready for review.
 - Search and Discovery PR merged into `main`.
 - Private, idempotent active-listing favorites API is implemented.
 - Search cards and the dedicated Favorites page share one reusable listing card.
+- Listing images are normalized to metadata-free WebP, stored in private S3-compatible
+  storage and exposed publicly only for active listings.
+- Authenticated listing complaints and independent owner appeals are implemented.
+- Phone verification, audited level decisions and public trust badges are implemented.
+- Atomic account and account/listing complaint rate limits are implemented.
+- Purpose-bound password recovery and active-session management are implemented.
+- Explainable, moderator-only coordinated complaint signals are implemented.
+- Durable notification outbox, retrying worker and administrator queue metrics are implemented.
+- Private low-cardinality OpenMetrics-compatible technical export is implemented.
+- Idempotent account/conversation message rate limits are implemented.
+- Private bidirectional messaging block controls are implemented.
+- Participant-scoped, rate-limited message reporting and moderator review are implemented.
+- Private participant-owned conversation notification mutes are implemented.
+- Atomic recipient-owned message read receipts are implemented without presence tracking.
+- Private normalized participant-authorized message images are implemented.
+- Recipient-confirmed atomic delivery receipts are implemented without presence tracking.
+- Participant-owned conversation unread counters and notification-read synchronization
+  are implemented.
+- Expo SDK 57 phone-test client, shared runtime API contracts and LAN development
+  workflow are implemented without duplicating backend business rules.
+- Explicit first-contact interaction state and immutable two-party completion
+  confirmation gate review eligibility.
+- Reviews are linked to their matching interaction by database constraints and
+  are immutable at the database layer.
+- Reviewed sellers and specialists can publish one immutable public response from
+  their profile cabinet; the database independently enforces the correct author.
+- Reviewees can open one immutable dispute; independent moderators can keep or
+  exclude a review without rewriting evidence or automatically sanctioning users.
+- Moderator-only reputation signals aggregate explainable 24-hour activity without
+  exposing reviewer identities or automatically changing rating, ranking or account state.
+- Password login applies atomic, HMAC-keyed account-level progressive delays across
+  client addresses and equalizes unknown-account password verification timing.
+- Dedicated CI security checks cover deployed dependencies, CodeQL, committed
+  secrets/misconfiguration and fixable HIGH/CRITICAL production-image findings.
+- API, Web and Worker production images install current OS security updates and
+  run with non-root identities; runtimes exclude test/development tooling and
+  unused Python/Web package managers.
 
 ## In progress
 
@@ -44,20 +82,39 @@ None.
 
 ## Next tasks
 
-- Review and merge the Moderation PR.
-- Verify and publish Favorites, then implement conversations and notifications.
+- Evaluate reputation-signal precision during beta and document a fair weighting
+  policy before reputation can influence discovery or organic ranking.
+- Continue Stage 10 with authenticated staging DAST and pre-launch operational drills.
+- Add production identity provider only after owner legal/security decision.
+- Add device/browser metadata to sessions after privacy review.
+- Add privacy-reviewed network/device correlation only if advisory complaint
+  signals prove insufficient during beta.
 
 ## Known limitations
 
-Production SMS and VK providers are disabled. CSRF tokens and account recovery are scheduled before public beta.
+Production SMS and VK providers are disabled. Recovery currently uses the local
+OTP adapter and must not be enabled publicly until an approved SMS provider exists.
+
+The Expo client currently exercises only public health, category and search
+contracts. Native authentication, secure session storage, media permissions and
+push notifications require their own reviewed roadmap slices.
+
+The earlier local Docker BuildKit hang was resolved by reducing the build context;
+the current API image rebuilds successfully and passes the complete verification.
 
 ## Technical debt
 
-Queue implementation, request IDs, metrics and S3 bucket bootstrap must be completed in the next infrastructure slice.
+Alert routing, dashboards and metrics retention remain deployment-specific.
+Non-image attachments remain outside the current messaging media scope.
+`npm audit --omit=dev` reports 16 non-critical findings (10 moderate, 6 high)
+through the current Expo CLI/Metro/Xcode dependency graph. The suggested automatic
+forced fix downgrades Expo 57 to 46 and is incompatible. The non-forced dry run
+currently fails dependency resolution; monitor Expo for compatible patched releases.
 
 ## Decisions needed from owner
 
-None for the foundation.
+- Select and legally review a production identity/liveness provider before
+  enabling document or biometric verification.
 
 ## Last verified commands
 
@@ -65,7 +122,8 @@ None for the foundation.
 - `npm run typecheck` — passed.
 - `npm run test` — passed.
 - `npm run build` — passed.
-- `npm audit` — zero vulnerabilities after patched transitive overrides.
+- `npm audit --omit=dev` — no critical findings; 16 upstream Expo toolchain
+  findings remain documented and cannot be safely auto-fixed.
 - `python -m ruff check apps/api` — passed.
 - `python -m pytest apps/api/tests -q` — passed.
 - `docker compose config --quiet` — passed.
@@ -85,7 +143,337 @@ None for the foundation.
 
 ## Latest successful test run
 
-2026-07-27: local API 16 passed; frontend lint, typecheck, tests and production build passed.
+2026-09-11: clean GitHub runners passed Web lint, strict typecheck, all 12 tests
+and the Next.js 16.3.4 production build; Expo lint, strict typecheck, all 5 tests
+and Android export; API Ruff and all 137 tests; dependency audits; CodeQL for
+Python and JavaScript/TypeScript; repository secret/configuration scanning; and
+HIGH/CRITICAL scans of all three production images. PostgreSQL remains at
+migration 0023 because this slice requires no schema change.
+
+## Continuous security scanning verification
+
+- Pull requests, `main`, weekly schedules and manual runs now invoke a dedicated
+  security workflow.
+- The Web production dependency graph has zero known npm vulnerabilities; the
+  complete non-development graph retains 10 moderate and 6 high findings only
+  through the Expo/Metro/Xcode phone-build toolchain and has no critical findings.
+- API dependency upgrades leave pip-audit with no known vulnerabilities; the API
+  test image passed Ruff and all 137 tests and its runtime omits pytest.
+- Clean-run Trivy scans found no repository secrets/misconfigurations and no
+  fixable HIGH/CRITICAL findings in independently rebuilt API, Web and Worker
+  production images.
+- CodeQL passed for Python and JavaScript/TypeScript. One Python result that
+  conflated the password and phone fields of the same request model was audited
+  and dismissed as a documented false positive: the flagged HMAC pseudonymizes a
+  phone identifier for Redis keys, while passwords are handled only by Argon2id.
+
+## Progressive login delay verification
+
+- Redis atomically counts account failures and applies a configurable exponential
+  delay after the second failure, capped at five minutes within a one-hour window.
+- Account and OTP Redis keys use HMAC-SHA-256 identities; raw phone numbers and
+  passwords are absent. Production rejects local, example and short key secrets.
+- Existing and unknown accounts both perform Argon2id verification and receive the
+  same generic credential response, reducing registration-state timing leakage.
+- Active delay bypasses password work and returns bounded `Retry-After`; Redis
+  failure closes the route with `503`.
+- Successful authentication uses compare-and-delete so it cannot clear a failure
+  recorded concurrently after password verification began.
+- The live flow returned `401, 401, 429, 429, 200`, then confirmed that both account
+  limiter keys were absent. Temporary test accounts were removed.
+- Fresh API image, Ruff and all 137 backend tests passed. Web lint, strict typecheck,
+  12 tests and production build passed; Expo lint, strict typecheck, 5 tests and
+  Android export passed unchanged.
+
+## Reputation abuse signal verification
+
+- The rolling 24-hour assessor requires at least two fixed, explainable indicators
+  and does not flag a five-review mixed-rating series on one weak indicator alone.
+- Moderator-excluded reviews are filtered from both candidate and detail queries.
+- The permission-gated response exposes the reviewed account and aggregate counts,
+  but no reviewer IDs, phone, network, device or precise account-creation data.
+- A live three-review series from three new accounts produced the expected
+  `new_account_cluster` and `rating_concentration` warning; anonymous access returned
+  `401`, and all temporary runtime records were removed.
+- The warning is presented as a manual-review aid and cannot modify reputation,
+  discovery ranking or account state.
+- Fresh API image, Ruff and all 126 backend tests passed. Web lint, strict typecheck,
+  11 tests and production build passed; Expo lint, strict typecheck, 5 tests and
+  Android export passed unchanged.
+
+## Review dispute verification
+
+- A pending dispute leaves its review public. The reviewed account sees `open` in
+  its private received-review history and the moderator sees it in the open queue.
+- A moderator who participated in the review receives `409`; an independent
+  moderator can decide once and a repeat returns `409`.
+- A live `exclude` decision produced an empty public review response and reputation
+  count zero while private history retained status `exclude`.
+- PostgreSQL rejected a dispute owned by anyone except `reviewee_id` and rejected
+  attempted mutation of both dispute evidence and the moderation decision.
+- Migration 0023 passed upgrade, downgrade and repeat upgrade while preserving all
+  three pre-existing local reviews. Runtime test accounts and records were removed.
+
+## Immutable review reply verification
+
+- Only the reviewed account can publish a reply; another participant receives
+  `404` without learning private authorization state.
+- A live two-account HTTP flow returned `201` for the reviewed seller, `409` for a
+  duplicate, and nested the reply in the public review without `author_id`.
+- PostgreSQL rejected a reply whose author did not match `reviewee_id` and rejected
+  an attempted rewrite of a published reply.
+- Migration 0022 passed upgrade, downgrade and repeat-upgrade while preserving all
+  three pre-existing local reviews.
+- The profile cabinet renders received reviews, publishes a reply and replaces the
+  form with the public response. The React async form-reset regression found by the
+  test was also fixed in reply, message-send and review-submit handlers.
+
+## Confirmed interaction verification
+
+- Each conversation receives exactly one interaction; its first persisted message
+  records contact without claiming that a transaction occurred.
+- Buyer and seller confirmations are participant-authorized, independently stored,
+  row-locked and idempotent. Completion requires both parties.
+- Review creation before completion returns `409`; the verified runtime flow
+  produced `contacted` after the first confirmation, `completed` after the second,
+  `201` for the first review and `409` for a duplicate.
+- Migration 0021 preserved and linked all three existing local reviews. A downgrade
+  to 0020 and repeat upgrade to 0021 also preserved them.
+- PostgreSQL triggers rejected attempted mutations of both a completed interaction
+  and an existing review. Composite foreign keys prevent cross-conversation links.
+- Fresh API image build, Ruff and all 111 tests passed. API health returned 200.
+- Web lint, strict typecheck, 10 tests and production build passed.
+- Expo lint, strict typecheck, 5 tests and Android export passed unchanged.
+
+## Expo mobile test foundation verification
+
+- `apps/mobile` uses Expo SDK 57 with strict TypeScript and a feature/API boundary;
+  it does not contain marketplace business rules or private session workarounds.
+- `packages/api-contracts` validates health, categories and search payloads with
+  shared Zod schemas before the phone UI renders them.
+- Missing or malformed API configuration, timeouts, non-success responses and
+  untrusted payloads produce bounded safe states; server error bodies are hidden.
+- `npx expo install --check` reports dependencies up to date. Expo Doctor passes
+  20 of 21 checks; only its remote config-schema request fails because the service
+  returns HTML, while local `npx expo config --type public` succeeds.
+- Metro started in LAN mode at `exp://<LAN-IP>:8081`; its LAN HTTP endpoint and
+  FastAPI at `http://<LAN-IP>:8000/health` both returned 200 locally.
+- Web regression passed after aligning React/React DOM 19.2.3 and updating Next.js
+  16.3.1; backend behavior and database schema are unchanged.
+
+## Conversation unread counter verification
+
+- Conversation summaries count only unread incoming messages for the authenticated
+  participant; the counterpart's private read state is never returned.
+- The existing partial unread-message index supports the correlated count, so no
+  schema migration is required.
+- Marking a conversation read clears owned conversation notifications in the same
+  transaction as incoming message receipts, including stale notification-only state;
+  a conversation row lock prevents races with concurrent sends.
+- The inbox displays accessible badges and clears the selected badge only after the
+  server accepts the read receipt, without triggering a fetch loop.
+- A fresh API image built successfully; Ruff and 106 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0020 (head)`.
+
+## Recipient delivery receipt verification
+
+- Delivery is acknowledged explicitly by the authenticated recipient client after
+  loading history; it is never inferred from Redis or notification dispatch.
+- Atomic `UPDATE ... RETURNING` targets only incoming undelivered messages and is
+  idempotent under retries and concurrency.
+- Reading fills only a missing delivery timestamp through `coalesce`, preserving
+  the earlier delivery time.
+- The inbox displays persisted sent, delivered and read states without presence or
+  last-seen tracking.
+- A fresh API image built successfully; Ruff and 104 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0020 (head)`.
+
+## Private message image verification
+
+- Upload requires message ownership, an unblocked conversation and an unreported
+  message; list/download requires participation or moderator permission.
+- JPEG, PNG and WebP are signature-decoded, byte/pixel/count bounded, stripped of
+  metadata and re-encoded as WebP before private storage.
+- Message locks serialize uploads with report creation, preserving evidence.
+- S3 objects and HTTP downloads use `private, no-store`; public URLs are absent.
+- Text remains durable when an optional image upload fails, with explicit UI state.
+- A fresh API image built successfully; Ruff and 102 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0019 (head)`.
+
+## Message read receipt verification
+
+- Only conversation participants can mark messages read; the atomic update targets
+  unread messages sent by the other participant.
+- `UPDATE ... RETURNING` makes repeated and concurrent receipt requests idempotent.
+- Persisted timezone-aware `read_at` values are exposed on message DTOs without
+  presence, last-seen or device metadata.
+- The inbox marks loaded incoming messages read and displays truthful receipts on
+  the current user's sent messages after refresh.
+- A fresh API image built successfully; Ruff and 96 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0018 (head)`.
+
+## Conversation mute verification
+
+- Only a participant can idempotently mute or unmute a conversation; foreign IDs
+  are hidden with `404`.
+- Muted recipients still receive durable messages and conversation ordering still
+  advances, while notification and outbox rows are intentionally omitted.
+- Mute state is private to the current participant and returned with their bounded
+  conversation summaries.
+- The inbox supports mute/unmute with explicit success and failure states.
+- A fresh API image built successfully; Ruff and 94 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0017 (head)`.
+
+## Message reporting verification
+
+- Only a conversation participant can report an incoming message; foreign message
+  IDs are hidden with `404` and senders cannot report their own content.
+- Idempotent request UUIDs reject changed payloads, including conflict races.
+- Atomic hashed Redis limits fail closed without exposing account or message IDs.
+- The moderator-only bounded queue exposes referenced message text for review;
+  reports never trigger automatic account sanctions.
+- Inbox reporting and moderator decisions include explicit success/error states.
+- A fresh API image built successfully; Ruff and 92 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0016 (head)`.
+
+## Messaging block lists verification
+
+- An authenticated user can idempotently block or unblock another active user.
+- Self-blocking and messaging in either blocked direction return safe `409` errors.
+- Existing conversation history remains readable while new conversations and
+  messages are rejected server-side, including a second check before persistence.
+- The private bounded block list exposes only user ID, display name and timestamp.
+- The inbox loads block state, supports block/unblock and disables sending for the
+  current user's blocks while preserving history.
+- A fresh API image built successfully; API Ruff and 87 tests passed on that image.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Alembic upgrade completed successfully; PostgreSQL reports `0015 (head)`.
+
+## Private metrics export verification
+
+- Export is disabled when `METRICS_TOKEN` is empty and weak non-empty tokens are
+  rejected during configuration validation.
+- Missing and incorrect Bearer tokens return the same hidden `404` response.
+- Secret comparisons are constant-time and tokens never appear in metric output.
+- HTTP labels contain registered route templates rather than concrete URLs.
+- Exported data is limited to HTTP aggregates, queue state and worker health.
+- Redis metric failure degrades the worker gauge without exposing an exception.
+- API Ruff and 78 tests passed using a freshly rebuilt image.
+- Frontend lint, strict typecheck, 9 tests and production build passed unchanged.
+- Docker Compose validated and Alembic remains at `0014 (head)`.
+
+## Message spam protection verification
+
+- Atomic Redis Lua applies per-account and per account/conversation limits.
+- Request UUID keys preserve the original allow/deny result, preventing both
+  double counting and retry bypass after a denial.
+- Identifier-bearing limiter keys are SHA-256 hashes.
+- Redis outage fails message creation closed without affecting conversation reads.
+- `429` includes `Retry-After`; the web UI explains `429`/`503` and keeps draft text.
+- API Ruff and 83 tests passed against current bind-mounted source.
+- Frontend lint, strict typecheck, 10 tests and production build passed.
+- Fresh API image rebuild remains pending due the documented local BuildKit hang.
+
+## Transactional queue verification
+
+- Notification and outbox rows commit in the same database transaction.
+- Unique topic/source keys make enqueue retries idempotent.
+- Worker claims with `SKIP LOCKED`, recovers stale locks and applies bounded
+  exponential retries before terminal failure.
+- Redis Streams are bounded, user identifiers in stream keys are hashed and event
+  payloads exclude message bodies and profile data.
+- Administrator metrics expose backlog, failures, oldest pending age and heartbeat
+  health without failing when Redis metrics are unavailable.
+- A real outbox task completed in one attempt and appeared in Redis Stream; its
+  isolated smoke-test records were removed afterward.
+- API and worker Ruff passed; 72 API tests passed on freshly rebuilt images.
+- Frontend lint, strict typecheck, 9 tests and production build passed.
+- Docker Compose validated and Alembic reports `0014 (head)`.
+
+## Coordinated complaint detection verification
+
+- A rolling 24-hour signal counts each reporter once per listing.
+- Warnings require at least two explainable indicators: reporter burst, reason
+  concentration or a cluster of accounts created during the previous seven days.
+- Signals are moderator-only and never trigger automatic enforcement.
+- Reporter identifiers and account creation timestamps remain server-side.
+- The moderation queue is bounded to at most 100 records per request.
+- API Ruff and 67 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 9 tests and production build passed.
+- Docker Compose configuration validated; no migration was required.
+
+## Account recovery and session verification
+
+- Login and recovery OTP values use separate Redis namespaces.
+- OTP expires after five minutes and is destroyed after five failed attempts.
+- Issuing a new OTP resets only that purpose's attempt counter.
+- Recovery endpoints are covered by the fail-closed auth rate limiter.
+- Successful password reset revokes every old session before issuing a new one.
+- Session DTO excludes token and token hash fields.
+- Users can revoke one non-current session or all other sessions.
+- Frontend provides recovery and active-session management flows.
+- API Ruff and 65 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 9 tests and production build passed.
+- Docker Compose configuration validated; migrations remain at 0013.
+
+## Complaint abuse protection verification
+
+- Atomic Redis Lua script applies per-account and per account/listing limits.
+- Duplicate idempotency request UUIDs do not consume the limit twice.
+- Redis keys hash account, listing and request identifiers.
+- Limit responses return 429 with `Retry-After`.
+- Redis outages fail complaint creation closed with 503.
+- Search UI explains limit and temporary security dependency failures.
+- Real local Redis smoke check allowed a fresh complaint attempt.
+- API Ruff and 56 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 8 tests and production build passed.
+- Docker Compose configuration validated.
+
+## Verification and trust badge verification
+
+- Successful OTP raises an account to phone-verified level.
+- Password registration alone leaves the account unverified.
+- Administrator level changes lock the user row and create an attributed decision.
+- Organization level is rejected for non-company accounts.
+- Verification decisions are protected from update/delete by a PostgreSQL trigger.
+- Public trust profile schema excludes phone, reviewer and evidence data.
+- Search cards display centrally derived seller badges without affecting ranking.
+- Profile UI renders human-readable verification levels.
+- API Ruff and 50 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 8 tests and production build passed.
+- Migrations 0012 and 0013 applied; the append-only trigger exists in PostgreSQL.
+
+## Complaints and appeals verification
+
+- Migration 0011 applied successfully.
+- Self-complaints and complaints against non-active listings are rejected.
+- Complaint retries are idempotent; changed payload reuse returns a conflict.
+- Complaint decisions use bounded decision/resolution pairs and row locking.
+- Confirmed listing restrictions archive the listing transactionally.
+- Appeals require listing ownership and an appealable moderation decision.
+- The original moderator cannot review the appeal.
+- Overturned appeals create a new moderation case instead of publishing directly.
+- Moderator UI exposes separate listing, complaint and appeal queues.
+- Search cards expose an authenticated complaint action.
+- API Ruff and 46 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 7 tests and production build passed.
+
+## Listing media verification
+
+- Migration 0010 applied successfully.
+- JPEG, PNG and WebP inputs are decoded by content and normalized to WebP.
+- EXIF metadata is removed and pixel/file limits are enforced.
+- Image normalization runs outside the async event loop.
+- Failed metadata transactions roll back before best-effort S3 cleanup.
+- Private draft media is excluded from the public media endpoint by query design.
+- API Ruff and 39 tests passed using a freshly rebuilt API image.
+- Frontend lint, strict typecheck, 6 tests and production build passed.
 
 ## Moderation verification
 

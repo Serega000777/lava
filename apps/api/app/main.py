@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
+import asyncio
 import time
 import uuid
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -21,6 +22,16 @@ from app.messaging.router import router as messaging_router
 from app.reviews.router import router as reviews_router
 from app.ai.router import router as ai_router
 from app.analytics.router import router as analytics_router
+from app.media.router import router as media_router
+from app.media.storage import S3Storage
+from app.complaints.router import router as complaints_router
+from app.verification.router import router as verification_router
+from app.blocking.router import router as blocking_router
+from app.message_reports.router import router as message_reports_router
+from app.message_media.router import router as message_media_router
+from app.interactions.router import router as interactions_router
+from app.analytics.service import queue_metrics
+from app.observability import http_metrics, metrics_request_is_authorized
 from app.security import (
     UNSAFE_METHODS,
     auth_rate_limit_exceeded,
@@ -40,6 +51,7 @@ logger = structlog.get_logger("lava.api")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await asyncio.to_thread(S3Storage().ensure_bucket)
     yield
 
 
@@ -60,6 +72,13 @@ app.include_router(messaging_router)
 app.include_router(reviews_router)
 app.include_router(ai_router)
 app.include_router(analytics_router)
+app.include_router(media_router)
+app.include_router(complaints_router)
+app.include_router(verification_router)
+app.include_router(blocking_router)
+app.include_router(message_reports_router)
+app.include_router(message_media_router)
+app.include_router(interactions_router)
 
 
 @app.middleware("http")
@@ -112,6 +131,14 @@ async def request_context(request: Request, call_next):
         status=response.status_code,
         duration_ms=round((time.perf_counter() - started) * 1000, 2),
     )
+    route = request.scope.get("route")
+    route_template = getattr(route, "path", "unmatched")
+    http_metrics.observe(
+        request.method,
+        route_template,
+        response.status_code,
+        time.perf_counter() - started,
+    )
     return response
 
 
@@ -130,3 +157,24 @@ async def readiness() -> dict[str, str]:
     finally:
         await redis.aclose()
     return {"status": "ready"}
+
+
+@app.get("/internal/metrics", include_in_schema=False)
+async def metrics(request: Request):
+    if not metrics_request_is_authorized(request, settings.metrics_token):
+        return JSONResponse(status_code=404, content={"detail": {"code": "not_found"}})
+    heartbeat: int | None = None
+    redis = Redis.from_url(settings.redis_url)
+    try:
+        value = await redis.get("lava:worker:heartbeat")
+        heartbeat = int(value) if value is not None else None
+    except (RedisError, ValueError):
+        heartbeat = None
+    finally:
+        await redis.aclose()
+    async with session_factory() as session:
+        queue = await queue_metrics(session, heartbeat)
+    return PlainTextResponse(
+        http_metrics.render(queue),
+        media_type="application/openmetrics-text; version=1.0.0; charset=utf-8",
+    )

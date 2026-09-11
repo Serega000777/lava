@@ -17,6 +17,7 @@ export default function NewListingPage() {
   const [listingId, setListingId] = useState("");
   const [generation, setGeneration] = useState<Generation | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
+  const [images, setImages] = useState<File[]>([]);
 
   useEffect(() => {
     fetch(`${apiUrl}/categories`)
@@ -68,7 +69,19 @@ export default function NewListingPage() {
     }
     const listing = await response.json() as { id: string };
     setListingId(listing.id);
-    setMessage(`Черновик сохранён: ${listing.id}`);
+    for (const image of images) {
+      const media = new FormData();
+      media.append("file", image);
+      const upload = await apiFetch(`${apiUrl}/listings/${listing.id}/media`, {
+        method: "POST",
+        body: media,
+      });
+      if (!upload.ok) {
+        setMessage("Черновик сохранён, но часть изображений не загрузилась.");
+        return;
+      }
+    }
+    setMessage(`Черновик сохранён: ${listing.id}. Изображений: ${images.length}.`);
   }
 
   async function improve() {
@@ -135,6 +148,15 @@ export default function NewListingPage() {
         <label>Описание<textarea name="description" maxLength={10000} /></label>
         <label>Цена<input name="price" type="number" min="0" step="0.01" /></label>
         <label>Город<input name="city" minLength={2} maxLength={120} required /></label>
+        <label>Изображения
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            onChange={(event) => setImages(Array.from(event.target.files ?? []).slice(0, 10))}
+          />
+          <small>До 10 файлов JPEG, PNG или WebP, каждый не более 10 МБ.</small>
+        </label>
         <button disabled={loading}>{loading ? "Сохраняем…" : "Сохранить черновик"}</button>
         {message && <p role="status">{message}</p>}
       </form>

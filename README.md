@@ -1,6 +1,6 @@
 # Lava
 
-Lava is an AI-assisted classifieds platform for cars, goods and services. The first foundation is a modular monolith with a Next.js web app, FastAPI API, PostgreSQL, Redis, MinIO and a background worker.
+Lava is an AI-assisted classifieds platform for cars, goods and services. The first foundation is a modular monolith with a Next.js web app, an Expo phone-test client, FastAPI API, PostgreSQL, Redis, MinIO and a background worker.
 
 ## Quick start
 
@@ -30,6 +30,20 @@ docker compose config
 ```
 
 Product scope, architecture, roadmap and current verification status live in `docs/`.
+
+## Test on a phone with Expo
+
+Start the Docker stack, copy `apps/mobile/.env.example` to
+`apps/mobile/.env.local`, replace the sample host with the computer's LAN IP,
+then run:
+
+```bash
+npm run mobile
+```
+
+Open the QR code in Expo Go while the phone and computer are on the same local
+network. `localhost` points to the phone itself and must not be used here. See
+`docs/mobile-development.md` for security boundaries and troubleshooting.
 
 ## Development authentication
 

@@ -7,6 +7,10 @@ export type PublicListing = {
   price: string | null;
   city: string;
   ai_generated_fields?: string[];
+  cover_image_url?: string | null;
+  seller_id?: string | null;
+  seller_name?: string | null;
+  seller_trust_badge?: string | null;
 };
 
 type Props = {
@@ -15,18 +19,35 @@ type Props = {
   favoriteBusy?: boolean;
   onFavorite?: (listingId: string, favorite: boolean) => void;
   onMessage?: (listingId: string) => void;
+  onReport?: (listingId: string) => void;
 };
 
 function formatPrice(price: string | null) {
-  return price === null ? "Цена по запросу" : `${new Intl.NumberFormat("ru-RU").format(Number(price))} ₽`;
+  return price === null
+    ? "Цена по запросу"
+    : `${new Intl.NumberFormat("ru-RU").format(Number(price))} ₽`;
 }
 
 export function ListingCard({
-  listing, favorite = false, favoriteBusy = false, onFavorite, onMessage,
+  listing,
+  favorite = false,
+  favoriteBusy = false,
+  onFavorite,
+  onMessage,
+  onReport,
 }: Props) {
   return (
     <article className="listing-card">
-      <div className="listing-placeholder" aria-hidden="true">Lava.</div>
+      {listing.cover_image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="listing-image"
+          src={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}${listing.cover_image_url}`}
+          alt=""
+        />
+      ) : (
+        <div className="listing-placeholder" aria-hidden="true">Lava.</div>
+      )}
       <div className="listing-body">
         {onFavorite && (
           <button
@@ -40,11 +61,26 @@ export function ListingCard({
           </button>
         )}
         <p className="listing-city">{listing.city}</p>
-        {listing.ai_generated_fields?.length ? <span className="ai-label">AI-assisted</span> : null}
+        {listing.seller_name && (
+          <p className="seller-trust">
+            <span>{listing.seller_name}</span>
+            {listing.seller_trust_badge && <strong>{listing.seller_trust_badge}</strong>}
+          </p>
+        )}
+        {listing.ai_generated_fields?.length ? <span className="ai-label">Создано с AI</span> : null}
         <h2>{listing.title}</h2>
         <p>{listing.description || "Продавец пока не добавил описание."}</p>
         <strong>{formatPrice(listing.price)}</strong>
-        {onMessage && <button className="message-button" onClick={() => onMessage(listing.id)}>Написать</button>}
+        {onMessage && (
+          <button className="message-button" onClick={() => onMessage(listing.id)}>
+            Написать
+          </button>
+        )}
+        {onReport && (
+          <button className="ghost report-button" onClick={() => onReport(listing.id)}>
+            Пожаловаться
+          </button>
+        )}
       </div>
     </article>
   );

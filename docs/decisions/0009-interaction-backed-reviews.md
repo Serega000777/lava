@@ -1,6 +1,6 @@
 # ADR 0009: Interaction-backed, immutable reviews
 
-Status: accepted
+Status: superseded by ADR 0029
 
 A review requires an existing conversation in which both participants have sent at least one message. Opening a conversation alone is not a platform-recorded interaction. Each participant may publish at most one immutable review per conversation, and the reviewed user is always the other participant.
 

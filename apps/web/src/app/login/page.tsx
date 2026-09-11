@@ -22,6 +22,17 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: data.get("phone"), password: data.get("password") }),
       });
+      if (response.status === 429) {
+        const retryAfter = Number(response.headers.get("Retry-After"));
+        throw new Error(
+          Number.isFinite(retryAfter) && retryAfter > 0
+            ? `Слишком много попыток. Повторите через ${retryAfter} сек.`
+            : "Слишком много попыток. Повторите позже.",
+        );
+      }
+      if (response.status === 503) {
+        throw new Error("Защита входа временно недоступна. Повторите позже.");
+      }
       if (!response.ok) throw new Error("Проверьте телефон и пароль");
       window.location.href = "/profile";
     } catch (error) {
@@ -41,6 +52,7 @@ export default function LoginPage() {
         <button disabled={loading}>{loading ? "Входим…" : "Войти"}</button>
         {message && <p role="alert" className="form-error">{message}</p>}
       </form>
+      <p><Link href="/recover">Забыли пароль?</Link></p>
       <p className="auth-note">SMS и VK будут доступны после подключения проверенных провайдеров.</p>
     </section></main>
   );

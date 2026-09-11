@@ -3,7 +3,8 @@
 Authenticated endpoints:
 
 - `POST /conversations` opens or returns the buyer's listing conversation.
-- `GET /conversations` returns participant-scoped summaries.
+- `GET /conversations` returns participant-scoped summaries with an incoming
+  unread-message count owned by the current participant.
 - `GET /conversations/{id}/messages` returns a bounded message page.
 - `POST /conversations/{id}/messages` accepts a trimmed body and client UUID.
 - `GET /notifications` returns private newest-first alerts.
@@ -11,4 +12,59 @@ Authenticated endpoints:
 
 Conversations can start only for active listings and never with the listing owner as buyer. Message bodies contain 1–4000 characters after trimming. HTML is treated as plain text by the React UI.
 
-Current limitations: polling/realtime transport, abuse rate limits, block lists, attachments and delivery/read receipts are scheduled for hardening. Before public beta, mutations also require explicit CSRF tokens in addition to SameSite cookies.
+Message creation has atomic Redis limits per account and per account/conversation
+pair. The defaults allow 60 messages per account and 20 per conversation each
+minute. Repeating the same client message UUID reproduces its original allow/deny
+decision without consuming the window twice; identifier-bearing Redis keys are
+hashed. Limiter failure returns `503` only for
+message creation, while conversation and message reads remain available.
+
+Current limitations: non-image attachments are scheduled for hardening. Realtime
+notification events are published through the
+transactional outbox, while the UI still uses polling as its durable fallback.
+
+User block controls are private and idempotent:
+
+- `PUT /users/{id}/block` blocks an active user;
+- `DELETE /users/{id}/block` removes the caller's block;
+- `GET /blocks` returns a bounded private block list.
+
+A block in either direction prevents new conversations and messages with `409`,
+but leaves history readable. The inbox disables its composer for blocks created by
+the current user and keeps the conversation visible.
+
+Incoming messages can be reported with a bounded reason and optional details.
+Only conversation participants can create reports, senders cannot report their
+own messages, and Redis applies idempotent fail-closed abuse limits. Moderators
+review the referenced immutable message in a permission-gated queue; reports do
+not trigger automatic account sanctions.
+
+Conversation notification mutes are private and idempotent:
+
+- `PUT /conversations/{id}/mute` disables future notification/outbox creation;
+- `DELETE /conversations/{id}/mute` restores notifications for future messages.
+
+Both endpoints verify participation. Muting never blocks message persistence,
+history reads or inbox ordering, and it is not visible to the other participant.
+
+`PATCH /conversations/{id}/read` atomically marks only unread messages sent by the
+other participant. The persisted `read_at` value is included in message DTOs, so
+senders see a truthful receipt after refresh. The endpoint is idempotent and does
+not implement presence or last-seen tracking. In the same transaction it marks
+the current participant's unread notifications for that conversation read. The
+conversation row serializes this operation with new-message persistence so a
+concurrent notification cannot be cleared ahead of its message. The inbox clears
+the selected conversation badge only after this request succeeds.
+
+Message images use private participant-authorized endpoints. JPEG, PNG and WebP
+inputs are limited to 5 MiB, decoded by signature, stripped of metadata and
+re-encoded as WebP; each message accepts at most three. Upload is sender-only,
+blocked conversations reject new media, and the attachment set is frozen when a
+message is reported. Moderator evidence downloads require `moderation:read`.
+
+`PATCH /conversations/{id}/delivered` is a recipient client acknowledgment after
+successful history loading. It atomically marks only messages sent by the other
+participant. Reading also fills a missing delivery timestamp, so `read_at` always
+implies delivery without overwriting an earlier acknowledgment. The UI labels
+persisted states as sent, delivered or read; no status is inferred from Redis or
+notification dispatch.

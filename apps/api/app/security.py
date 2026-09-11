@@ -12,6 +12,8 @@ RATE_LIMITED_AUTH_PATHS = frozenset({
     "/auth/login/password",
     "/auth/otp/request",
     "/auth/otp/verify",
+    "/auth/recovery/request",
+    "/auth/recovery/confirm",
 })
 
 
