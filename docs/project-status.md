@@ -74,6 +74,8 @@ Isolated Authenticated DAST — implementation and local verification complete.
 - Authenticated OWASP ZAP DAST runs against a per-run ephemeral Compose project,
   proves the test session through `/me`, scans a bounded OpenAPI contract and
   fails closed on HIGH-risk or malformed results.
+- The local/test MinIO adapter uses an immutable official Quay release digest;
+  clean runners no longer depend on the retired Docker Hub `latest` reference.
 
 ## In progress
 

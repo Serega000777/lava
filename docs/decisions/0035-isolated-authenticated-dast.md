@@ -26,3 +26,9 @@ parser both reject HIGH-risk alerts; malformed or missing reports also fail the
 workflow. Lower-risk findings remain visible for review and must not be silently
 suppressed. Any future exception requires a documented, expiring security decision
 rather than an inline allowlist entry.
+
+The first clean runner exposed that the former floating `minio/minio:latest`
+reference was no longer pullable from Docker Hub. Compose now uses the official
+Quay release with an immutable multi-architecture digest, removing dependence on
+a developer machine's image cache. This MinIO service remains a local/test adapter;
+production object storage is provider-managed and deployment-specific.
