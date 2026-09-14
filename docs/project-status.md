@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Continuous Security Scanning — implementation and verification complete.
+Isolated Authenticated DAST — implementation and local verification complete.
 
 ## Completed
 
@@ -71,6 +71,9 @@ Continuous Security Scanning — implementation and verification complete.
 - API, Web and Worker production images install current OS security updates and
   run with non-root identities; runtimes exclude test/development tooling and
   unused Python/Web package managers.
+- Authenticated OWASP ZAP DAST runs against a per-run ephemeral Compose project,
+  proves the test session through `/me`, scans a bounded OpenAPI contract and
+  fails closed on HIGH-risk or malformed results.
 
 ## In progress
 
@@ -84,7 +87,7 @@ None.
 
 - Evaluate reputation-signal precision during beta and document a fair weighting
   policy before reputation can influence discovery or organic ranking.
-- Continue Stage 10 with authenticated staging DAST and pre-launch operational drills.
+- Continue Stage 10 with backup-restore, incident-response and session-revocation drills.
 - Add production identity provider only after owner legal/security decision.
 - Add device/browser metadata to sessions after privacy review.
 - Add privacy-reviewed network/device correlation only if advisory complaint
@@ -143,6 +146,11 @@ currently fails dependency resolution; monitor Expo for compatible patched relea
 
 ## Latest successful test run
 
+2026-09-14: local isolated DAST passed its authenticated `/me` gate, imported 68
+operations across 57 bounded API paths, completed 22,771 requests with no HTTP 5xx
+responses, produced valid JSON/HTML reports and found no alerts at any risk level.
+The tooling's 8 unit tests and the pinned ZAP 2.17.0 plan validation passed.
+
 2026-09-11: clean GitHub runners passed Web lint, strict typecheck, all 12 tests
 and the Next.js 16.3.4 production build; Expo lint, strict typecheck, all 5 tests
 and Android export; API Ruff and all 137 tests; dependency audits; CodeQL for
@@ -166,6 +174,22 @@ migration 0023 because this slice requires no schema change.
   conflated the password and phone fields of the same request model was audited
   and dismissed as a documented false positive: the flagged HMAC pseudonymizes a
   phone identifier for Redis keys, while passwords are handled only by Argon2id.
+
+## Authenticated DAST verification
+
+- A random account and session are created only inside the isolated test database;
+  ZAP must receive `200` from `/me` before contract import or active scanning.
+- The generated contract excludes `/auth` and `/internal`, avoiding session
+  revocation, account-edge rate-limit noise and private operational endpoints.
+- The digest-pinned scanner injects the trusted Origin and matching double-submit
+  CSRF values, so authenticated unsafe methods are exercised without changing the
+  application's browser protection.
+- Active scanning is limited to two threads, low attack strength, 20 ms request
+  delay, one minute per rule, 12 minutes total and 20 alerts per rule.
+- The clean baseline performed 22,771 API requests with zero 5xx responses and
+  reported zero HIGH, MEDIUM, LOW or informational alerts.
+- A fail-closed parser independently validates the JSON report and rejects HIGH
+  alerts; CI retains both reports for 14 days and always destroys the test volumes.
 
 ## Progressive login delay verification
 
