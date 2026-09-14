@@ -52,6 +52,9 @@ jobs:
           postgres_password="$(openssl rand -hex 24)"
           s3_secret="$(openssl rand -hex 32)"
           rate_limit_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$postgres_password"
+          echo "::add-mask::$s3_secret"
+          echo "::add-mask::$rate_limit_secret"
           {
             printf 'APP_ENV=production\n'
             printf 'POSTGRES_DB=lava\n'
@@ -71,6 +74,16 @@ jobs:
             printf 'RATE_LIMIT_KEY_SECRET=%s\n' "$rate_limit_secret"
             printf 'METRICS_TOKEN=\n'
           } > .env
+          {
+            printf 'POSTGRES_DB=lava\n'
+            printf 'POSTGRES_USER=lava\n'
+            printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
+            printf 'S3_ACCESS_KEY=lava-dast\n'
+            printf 'S3_SECRET_KEY=%s\n' "$s3_secret"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate isolated Compose credentials
+        run: docker compose config --format json | python scripts/dast/validate_compose_config.py
 
       - name: Start isolated API stack
         run: docker compose up --build --detach --wait api

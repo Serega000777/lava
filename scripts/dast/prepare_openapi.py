@@ -42,7 +42,7 @@ def filter_schema(schema: object) -> dict[str, Any]:
 
 def load_schema() -> object:
     request = Request(f"{API_URL}/openapi.json", headers={"Accept": "application/json"})
-    with urlopen(request, timeout=15) as response:  # noqa: S310 - fixed trusted CI URL
+    with urlopen(request, timeout=15) as response:
         if response.status != 200:
             raise InvalidOpenApi(f"OpenAPI endpoint returned HTTP {response.status}")
         return json.load(response)

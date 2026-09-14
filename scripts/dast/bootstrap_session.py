@@ -40,10 +40,10 @@ def request_json(
     request = Request(
         f"{API_URL}{path}", data=body, headers=request_headers, method=method
     )
-    with urlopen(request, timeout=15) as response:  # noqa: S310 - fixed trusted CI URL
+    with urlopen(request, timeout=15) as response:
         response_body = json.load(response)
         if not isinstance(response_body, dict):
-            raise RuntimeError(f"{path} returned a non-object JSON response")
+            raise TypeError(f"{path} returned a non-object JSON response")
         return response.status, response_body, response.headers.get_all("Set-Cookie", [])
 
 

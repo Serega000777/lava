@@ -6,10 +6,12 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
+from typing import Any
 
 from bootstrap_session import extract_cookie
 from check_zap_report import main
 from prepare_openapi import InvalidOpenApi, filter_schema
+from validate_compose_config import validate_compose_config
 
 
 class BootstrapSessionTests(unittest.TestCase):
@@ -112,6 +114,48 @@ class OpenApiPreparationTests(unittest.TestCase):
     def test_filter_schema_requires_authenticated_probe(self) -> None:
         with self.assertRaises(InvalidOpenApi):
             filter_schema({"openapi": "3.1.0", "paths": {"/health": {"get": {}}}})
+
+
+class ComposeCredentialTests(unittest.TestCase):
+    def compose_config(self) -> dict[str, Any]:
+        return {
+            "services": {
+                "api": {
+                    "environment": {
+                        "DATABASE_URL": (
+                            "postgresql+asyncpg://lava:strong-password@postgres:5432/lava"
+                        ),
+                        "S3_ACCESS_KEY": "lava-dast",
+                        "S3_SECRET_KEY": "strong-object-storage-secret",
+                    }
+                },
+                "postgres": {
+                    "environment": {
+                        "POSTGRES_DB": "lava",
+                        "POSTGRES_USER": "lava",
+                        "POSTGRES_PASSWORD": "strong-password",
+                    }
+                },
+                "minio": {
+                    "environment": {
+                        "MINIO_ROOT_USER": "lava-dast",
+                        "MINIO_ROOT_PASSWORD": "strong-object-storage-secret",
+                    }
+                },
+            }
+        }
+
+    def test_validator_accepts_consistent_credentials(self) -> None:
+        validate_compose_config(self.compose_config())
+
+    def test_validator_rejects_shadowed_postgres_password(self) -> None:
+        config = self.compose_config()
+        config["services"]["postgres"]["environment"]["POSTGRES_PASSWORD"] = (
+            "ambient-runner-password"
+        )
+
+        with self.assertRaisesRegex(ValueError, "Postgres passwords differ"):
+            validate_compose_config(config)
 
 
 if __name__ == "__main__":
