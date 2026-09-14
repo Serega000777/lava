@@ -75,6 +75,12 @@ jobs:
       - name: Start isolated API stack
         run: docker compose up --build --detach --wait api
 
+      - name: Report API startup failure
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 200 api
+
       - name: Create authenticated scan session
         run: python scripts/dast/bootstrap_session.py
 
