@@ -8,8 +8,8 @@ at service boundaries, CSP and browser security headers, immutable audit/credit
 ledgers, idempotency keys and payload-free structured request logging.
 
 Planned controls include allowlisted outbound integrations, nonce-based CSP, edge
-volumetric protection, authenticated staging DAST and verified backup/incident-response
-procedures. See `production-hardening.md` for deployment requirements.
+volumetric protection and verified backup/incident-response procedures. See
+`production-hardening.md` for deployment requirements.
 
 The CI security workflow audits deployed dependencies, runs CodeQL across Python
 and TypeScript, detects committed secrets and configuration defects, and scans all
@@ -18,6 +18,15 @@ pinned to immutable commit SHAs. Runtime images install available OS security
 updates, use non-root identities and omit unnecessary development tooling and
 Python/Web package managers. Scheduled weekly scans detect advisories disclosed after merge;
 unfixed upstream findings still require monitoring and risk review.
+
+Authenticated DAST runs only against a fresh CI Compose project with generated
+credentials and disabled external identity providers. Its derived OpenAPI contract
+excludes authentication and internal operational routes, then a mandatory `/me`
+probe proves that ZAP is sending the ephemeral session before active rules run.
+Double-submit CSRF and Origin headers are exercised on protected mutations. The
+scanner is resource/time bounded, its image is digest-pinned, HIGH alerts and
+malformed reports fail closed, and cleanup destroys every test volume. This control
+does not authorize scanning production or shared environments.
 
 Complaint abuse is constrained by authentication, self-report prevention,
 bounded reason codes, idempotency keys and atomic per-account/per-target Redis

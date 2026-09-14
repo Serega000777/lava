@@ -1,0 +1,110 @@
+env:
+  contexts:
+    - name: lava-api
+      urls:
+        - http://localhost:8000
+      includePaths:
+        - ^http://localhost:8000/.*
+      excludePaths:
+        - ^http://localhost:8000/auth(?:/.*)?$
+        - ^http://localhost:8000/internal/metrics(?:/.*)?$
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    continueOnFailure: false
+    progressToStdout: true
+
+jobs:
+  - type: replacer
+    parameters:
+      deleteAllRules: true
+    rules:
+      - description: Double-submit CSRF token
+        url: ^http://localhost:8000/.*
+        matchType: req_header
+        matchString: X-CSRF-Token
+        replacementString: lava-dast-double-submit
+      - description: Trusted staging origin
+        url: ^http://localhost:8000/.*
+        matchType: req_header
+        matchString: Origin
+        replacementString: http://localhost:3000
+
+  - type: requestor
+    requests:
+      - name: Verify authenticated ZAP session
+        url: http://localhost:8000/me
+        method: GET
+        responseCode: 200
+
+  - type: openapi
+    parameters:
+      apiFile: /zap/wrk/runtime/openapi.json
+      targetUrl: http://localhost:8000
+      context: lava-api
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: activeScan
+    parameters:
+      context: lava-api
+      url: http://localhost:8000
+      defaultStrength: Low
+      defaultThreshold: Medium
+      maxRuleDurationInMins: 1
+      maxScanDurationInMins: 12
+      delayInMs: 20
+      handleAntiCSRFTokens: false
+      threadPerHost: 2
+      maxAlertsPerRule: 20
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: report
+    parameters:
+      template: modern
+      reportDir: /zap/wrk/reports
+      reportFile: zap-report.html
+      reportTitle: Lava isolated authenticated DAST
+      reportDescription: Ephemeral CI scan; never point this plan at production.
+    risks:
+      - high
+      - medium
+      - low
+      - info
+    confidences:
+      - high
+      - medium
+      - low
+      - falsepositive
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: /zap/wrk/reports
+      reportFile: zap-report.json
+      reportTitle: Lava isolated authenticated DAST
+      reportDescription: Machine-readable policy input for the CI security gate.
+    risks:
+      - high
+      - medium
+      - low
+      - info
+    confidences:
+      - high
+      - medium
+      - low
+      - falsepositive
+
+  - type: exitStatus
+    parameters:
+      errorLevel: High
+      warnLevel: High
+      okExitValue: 0
+      errorExitValue: 3
+      warnExitValue: 3
+    alwaysRun: true

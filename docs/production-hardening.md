@@ -18,6 +18,10 @@
 - CI audits deployed dependencies, runs CodeQL for Python and TypeScript, scans
   committed files for secrets/misconfiguration and blocks fixable HIGH/CRITICAL
   findings in all production images.
+- CI runs authenticated OWASP ZAP DAST against a uniquely named ephemeral API
+  stack, verifies the session through ZAP itself and blocks HIGH-risk findings.
+  Authentication and internal routes are excluded from the generated scan contract;
+  reports are retained for security review and all test volumes are destroyed.
 - Web CSP, frame blocking and restricted browser capabilities.
 
 ## Deployment requirements
@@ -42,5 +46,4 @@
 - Put provider-side OTP limits behind the Redis edge limit when the approved SMS
   provider is selected.
 - Add edge/WAF volumetric protection and trusted-proxy client-IP handling.
-- Add authenticated DAST against an isolated staging environment.
 - Complete backup-restore, incident-response and session-revocation drills.

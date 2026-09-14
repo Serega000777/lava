@@ -1,0 +1,158 @@
+name: Isolated authenticated DAST
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/dast.yml"
+      - ".zap/**"
+      - "apps/api/**"
+      - "docker-compose.yml"
+      - "scripts/dast/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/dast.yml"
+      - ".zap/**"
+      - "apps/api/**"
+      - "docker-compose.yml"
+      - "scripts/dast/**"
+  schedule:
+    - cron: "41 4 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authenticated-api-scan:
+    name: Authenticated API scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      COMPOSE_PROJECT_NAME: lava-dast-${{ github.run_id }}-${{ github.run_attempt }}
+      DAST_API_URL: http://localhost:8000
+      DAST_ORIGIN: http://localhost:3000
+      ZAP_IMAGE: ghcr.io/zaproxy/zaproxy:2.17.0@sha256:781a2bdaea47324e7bab583e2263f21d257b0aee61ed51521a5be45f5f5081ef
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Test DAST tooling
+        run: python scripts/dast/test_dast_tools.py
+
+      - name: Create ephemeral staging configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          postgres_password="$(openssl rand -hex 24)"
+          s3_secret="$(openssl rand -hex 32)"
+          rate_limit_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$postgres_password"
+          echo "::add-mask::$s3_secret"
+          echo "::add-mask::$rate_limit_secret"
+          {
+            printf 'APP_ENV=production\n'
+            printf 'POSTGRES_DB=lava\n'
+            printf 'POSTGRES_USER=lava\n'
+            printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
+            printf 'DATABASE_URL=postgresql+asyncpg://lava:%s@postgres:5432/lava\n' "$postgres_password"
+            printf 'REDIS_URL=redis://redis:6379/0\n'
+            printf 'S3_ENDPOINT=http://minio:9000\n'
+            printf 'S3_ACCESS_KEY=lava-dast\n'
+            printf 'S3_SECRET_KEY=%s\n' "$s3_secret"
+            printf 'S3_BUCKET=media\n'
+            printf 'PASSWORD_LOGIN_ENABLED=true\n'
+            printf 'LOCAL_OTP_ENABLED=false\n'
+            printf 'SMS_OTP_ENABLED=false\n'
+            printf 'VK_OAUTH_ENABLED=false\n'
+            printf 'ALLOWED_ORIGINS=http://localhost:3000\n'
+            printf 'RATE_LIMIT_KEY_SECRET=%s\n' "$rate_limit_secret"
+            printf 'METRICS_TOKEN=\n'
+          } > .env
+          {
+            printf 'POSTGRES_DB=lava\n'
+            printf 'POSTGRES_USER=lava\n'
+            printf 'POSTGRES_PASSWORD=%s\n' "$postgres_password"
+            printf 'S3_ACCESS_KEY=lava-dast\n'
+            printf 'S3_SECRET_KEY=%s\n' "$s3_secret"
+          } >> "$GITHUB_ENV"
+
+      - name: Validate isolated Compose credentials
+        run: docker compose config --format json | python scripts/dast/validate_compose_config.py
+
+      - name: Start isolated API stack
+        run: docker compose up --build --detach --wait api
+
+      - name: Report API startup failure
+        if: failure()
+        run: |
+          docker compose ps --all
+          docker compose logs --no-color --tail 200 api
+
+      - name: Create authenticated scan session
+        run: python scripts/dast/bootstrap_session.py
+
+      - name: Prepare bounded OpenAPI input
+        run: python scripts/dast/prepare_openapi.py
+
+      - name: Validate ZAP automation plan
+        run: |
+          docker run --rm \
+            --env ZAP_AUTH_HEADER \
+            --env ZAP_AUTH_HEADER_VALUE \
+            --volume "$GITHUB_WORKSPACE/.zap:/zap/wrk:ro" \
+            "$ZAP_IMAGE" \
+            zap.sh -cmd -autocheck /zap/wrk/automation.yaml
+
+      - name: Run authenticated active scan
+        id: zap
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .zap/reports
+          chmod 0777 .zap/reports
+          set +e
+          docker run --rm --name "${COMPOSE_PROJECT_NAME}-zap" --network host \
+            --env ZAP_AUTH_HEADER \
+            --env ZAP_AUTH_HEADER_VALUE \
+            --volume "$GITHUB_WORKSPACE/.zap:/zap/wrk:rw" \
+            "$ZAP_IMAGE" \
+            zap.sh -cmd -autorun /zap/wrk/automation.yaml
+          zap_exit_code=$?
+          set -e
+          printf 'exit_code=%s\n' "$zap_exit_code" >> "$GITHUB_OUTPUT"
+          test -s .zap/reports/zap-report.json
+          test -s .zap/reports/zap-report.html
+
+      - name: Enforce DAST risk policy
+        run: python scripts/dast/check_zap_report.py .zap/reports/zap-report.json
+
+      - name: Verify ZAP execution status
+        if: always() && steps.zap.outputs.exit_code != '0'
+        env:
+          ZAP_EXIT_CODE: ${{ steps.zap.outputs.exit_code }}
+        run: |
+          echo "ZAP returned exit code ${ZAP_EXIT_CODE:-missing}; review the uploaded report and scan log." >&2
+          exit 1
+
+      - name: Upload DAST reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lava-authenticated-dast-${{ github.run_id }}
+          path: .zap/reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Destroy isolated stack
+        if: always()
+        shell: bash
+        run: |
+          docker rm --force "${COMPOSE_PROJECT_NAME}-zap" 2>/dev/null || true
+          docker compose down --volumes --remove-orphans
+          rm -f .env
